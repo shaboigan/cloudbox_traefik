@@ -31,9 +31,9 @@
     - { role: ombi, tags: ['cloudbox', 'mediabox', 'ombi'] }
     - { role: plex_autoscan, tags: ['cloudbox', 'mediabox', 'plex_autoscan'] }
     - { role: cloudplow, tags: ['cloudbox', 'feederbox', 'cloudplow'], when: ['use_remote'] }
-    - { role: jackett, tags: ['cloudbox', 'feederbox', 'jackett'], when: ['use_torrents'] }
     - { role: deluge, tags: ['cloudbox', 'feederbox', 'deluge'], when: [ 'use_torrents' ] }    
     - { role: sabnzbd, tags: ['cloudbox', 'feederbox', 'sabnzbd'], when: ['use_nzbs'] }
+    - { role: jackett, tags: ['cloudbox', 'feederbox', 'jackett'], when: ['use_torrents'] }
     - { role: nzbhydra2, tags: ['cloudbox', 'feederbox', 'nzbhydra2'], when: ['use_nzbs'] }
     - { role: sonarr, tags: ['cloudbox', 'feederbox', 'sonarr'] }
     - { role: radarr, tags: ['cloudbox', 'feederbox', 'radarr'] }
