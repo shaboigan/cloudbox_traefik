@@ -18,7 +18,7 @@
 
 - name: Slurp hashed htpasswd
   slurp:
-    src: "/opt/traefik_v2/.htpasswd"
+    src: "/opt/traefik_v1/.htpasswd"
   register: hashed
 
 - name: Set hashed password
@@ -59,17 +59,26 @@
     volumes: "{{ default_volumes + nzbs_downloads_path|default([]) + torrents_downloads_path|default([]) }}"
     labels:
       traefik.enable: "true"
-      traefik.http.routers.lidarr.entrypoints: "http"
-      traefik.http.routers.lidarr.rule: "Host:lidarr.{{ user.domain }}"
-      traefik.http.routers.lidarr.middlewares: "https-redirect@file"
-      traefik.http.routers.lidarr-secure.entrypoints: "https"
-      traefik.http.routers.lidarr-secure.rule: "Host:lidarr.{{ user.domain }}"
-      traefik.http.routers.lidarr-secure.tls: "true"
-      traefik.http.routers.lidarr-secure.tls.certresolver: "http"
-      traefik.http.routers.lidarr-secure.service: "lidarr"
-      traefik.http.services.lidarr.loadbalancer.server.port: "8686"
+      traefik.backend: "lidarr"
+      traefik.frontend.redirect.entryPoint: "https"
+      traefik.frontend.rule: "Host:lidarr.{{ user.domain }}"
+      traefik.port: "8686"
+      traefik.frontend.auth.basic: "{{ htpasswd }}"
       traefik.docker.network: "cloudbox"
       "com.github.cloudbox.cloudbox_managed": "true"
+#    labels:
+#      traefik.enable: "true"
+#      traefik.http.routers.lidarr.entrypoints: "http"
+#      traefik.http.routers.lidarr.rule: "Host:lidarr.{{ user.domain }}"
+#      traefik.http.routers.lidarr.middlewares: "https-redirect@file"
+#      traefik.http.routers.lidarr-secure.entrypoints: "https"
+#      traefik.http.routers.lidarr-secure.rule: "Host:lidarr.{{ user.domain }}"
+#      traefik.http.routers.lidarr-secure.tls: "true"
+#      traefik.http.routers.lidarr-secure.tls.certresolver: "http"
+#      traefik.http.routers.lidarr-secure.service: "lidarr"
+#      traefik.http.services.lidarr.loadbalancer.server.port: "8686"
+#      traefik.docker.network: "cloudbox"
+#      "com.github.cloudbox.cloudbox_managed": "true"
     networks:
       - name: cloudbox
         aliases:

@@ -19,7 +19,7 @@
 
 - name: Slurp hashed htpasswd
   slurp:
-    src: "/opt/traefik_v2/.htpasswd"
+    src: "/opt/traefik_v1/.htpasswd"
   register: hashed
 
 - name: Set hashed password
@@ -66,17 +66,26 @@
     devices: "{{ '/dev/dri:/dev/dri' if (gpu.intel and dev_dri.stat.exists) | default(false) else omit }}"
     labels:
       traefik.enable: "true"
-      traefik.http.routers.sonarr4k.entrypoints: "http"
-      traefik.http.routers.sonarr4k.rule: "Host:sonarr4k.{{ user.domain }}"
-      traefik.http.routers.sonarr4k.middlewares: "https-redirect@file"
-      traefik.http.routers.sonarr4k-secure.entrypoints: "https"
-      traefik.http.routers.sonarr4k-secure.rule: "Host:sonarr4k.{{ user.domain }}"
-      traefik.http.routers.sonarr4k-secure.tls: "true"
-      traefik.http.routers.sonarr4k-secure.tls.certresolver: "http"
-      traefik.http.routers.sonarr4k-secure.service: "sonarr4k"
-      traefik.http.services.sonarr4k.loadbalancer.server.port: "8989"
+      traefik.backend: "sonarr4k"
+      traefik.frontend.redirect.entryPoint: "https"
+      traefik.frontend.rule: "Host:sonarr4k.{{ user.domain }}"
+      traefik.port: "8989"
+      traefik.frontend.auth.basic: "{{ htpasswd }}"
       traefik.docker.network: "cloudbox"
       "com.github.cloudbox.cloudbox_managed": "true"
+#    labels:
+#      traefik.enable: "true"
+#      traefik.http.routers.sonarr4k.entrypoints: "http"
+#      traefik.http.routers.sonarr4k.rule: "Host:sonarr4k.{{ user.domain }}"
+#      traefik.http.routers.sonarr4k.middlewares: "https-redirect@file"
+#      traefik.http.routers.sonarr4k-secure.entrypoints: "https"
+#      traefik.http.routers.sonarr4k-secure.rule: "Host:sonarr4k.{{ user.domain }}"
+#      traefik.http.routers.sonarr4k-secure.tls: "true"
+#      traefik.http.routers.sonarr4k-secure.tls.certresolver: "http"
+#      traefik.http.routers.sonarr4k-secure.service: "sonarr4k"
+#      traefik.http.services.sonarr4k.loadbalancer.server.port: "8989"
+#      traefik.docker.network: "cloudbox"
+#      "com.github.cloudbox.cloudbox_managed": "true"
     networks:
       - name: cloudbox
         aliases:

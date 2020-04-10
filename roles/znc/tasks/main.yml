@@ -18,7 +18,7 @@
 
 - name: Slurp hashed htpasswd
   slurp:
-    src: "/opt/traefik_v2/.htpasswd"
+    src: "/opt/traefik_v1/.htpasswd"
   register: hashed
 
 - name: Set hashed password
@@ -51,17 +51,26 @@
       - "/opt/znc:/config"
     labels:
       traefik.enable: "true"
-      traefik.http.routers.znc.entrypoints: "http"
-      traefik.http.routers.znc.rule: "Host:znc.{{ user.domain }}"
-      traefik.http.routers.znc.middlewares: "https-redirect@file"
-      traefik.http.routers.znc-secure.entrypoints: "https"
-      traefik.http.routers.znc-secure.rule: "Host:znc.{{ user.domain }}"
-      traefik.http.routers.znc-secure.tls: "true"
-      traefik.http.routers.znc-secure.tls.certresolver: "http"
-      traefik.http.routers.znc-secure.service: "znc"
-      traefik.http.services.znc.loadbalancer.server.port: "6501"
+      traefik.backend: "znc"
+      traefik.frontend.redirect.entryPoint: "https"
+      traefik.frontend.rule: "Host:znc.{{ user.domain }}"
+      traefik.port: "6501"
+      traefik.frontend.auth.basic: "{{ htpasswd }}"
       traefik.docker.network: "cloudbox"
       "com.github.cloudbox.cloudbox_managed": "true"
+#    labels:
+#      traefik.enable: "true"
+#      traefik.http.routers.znc.entrypoints: "http"
+#      traefik.http.routers.znc.rule: "Host:znc.{{ user.domain }}"
+#      traefik.http.routers.znc.middlewares: "https-redirect@file"
+#      traefik.http.routers.znc-secure.entrypoints: "https"
+#      traefik.http.routers.znc-secure.rule: "Host:znc.{{ user.domain }}"
+#      traefik.http.routers.znc-secure.tls: "true"
+#      traefik.http.routers.znc-secure.tls.certresolver: "http"
+#      traefik.http.routers.znc-secure.service: "znc"
+#      traefik.http.services.znc.loadbalancer.server.port: "6501"
+#      traefik.docker.network: "cloudbox"
+#      "com.github.cloudbox.cloudbox_managed": "true"
     networks:
       - name: cloudbox
         aliases:

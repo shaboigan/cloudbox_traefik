@@ -18,7 +18,7 @@
 
 - name: Slurp hashed htpasswd
   slurp:
-    src: "/opt/traefik_v2/.htpasswd"
+    src: "/opt/traefik_v1/.htpasswd"
   register: hashed
 
 - name: Set hashed password
@@ -76,17 +76,26 @@
       - "/opt/jackett:/config"
     labels:
       traefik.enable: "true"
-      traefik.http.routers.jackett.entrypoints: "http"
-      traefik.http.routers.jackett.rule: "Host:jackett.{{ user.domain }}"
-      traefik.http.routers.jackett.middlewares: "https-redirect@file"
-      traefik.http.routers.jackett-secure.entrypoints: "https"
-      traefik.http.routers.jackett-secure.rule: "Host:jackett.{{ user.domain }}"
-      traefik.http.routers.jackett-secure.tls: "true"
-      traefik.http.routers.jackett-secure.tls.certresolver: "http"
-      traefik.http.routers.jackett-secure.service: "jackett"
-      traefik.http.services.jackett.loadbalancer.server.port: "9117"
+      traefik.backend: "jackett"
+      traefik.frontend.redirect.entryPoint: "https"
+      traefik.frontend.rule: "Host:jackett.{{ user.domain }}"
+      traefik.port: "9117"
+      traefik.frontend.auth.basic: "{{ htpasswd }}"
       traefik.docker.network: "cloudbox"
       "com.github.cloudbox.cloudbox_managed": "true"
+#    labels:
+#      traefik.enable: "true"
+#      traefik.http.routers.jackett.entrypoints: "http"
+#      traefik.http.routers.jackett.rule: "Host:jackett.{{ user.domain }}"
+#      traefik.http.routers.jackett.middlewares: "https-redirect@file"
+#      traefik.http.routers.jackett-secure.entrypoints: "https"
+#      traefik.http.routers.jackett-secure.rule: "Host:jackett.{{ user.domain }}"
+#      traefik.http.routers.jackett-secure.tls: "true"
+#      traefik.http.routers.jackett-secure.tls.certresolver: "http"
+#      traefik.http.routers.jackett-secure.service: "jackett"
+#      traefik.http.services.jackett.loadbalancer.server.port: "9117"
+#      traefik.docker.network: "cloudbox"
+#      "com.github.cloudbox.cloudbox_managed": "true"
     networks:
       - name: cloudbox
         aliases:

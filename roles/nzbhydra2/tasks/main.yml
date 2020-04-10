@@ -18,7 +18,7 @@
 
 - name: Slurp hashed htpasswd
   slurp:
-    src: "/opt/traefik_v2/.htpasswd"
+    src: "/opt/traefik_v1/.htpasswd"
   register: hashed
 
 - name: Set hashed password
@@ -62,17 +62,26 @@
     volumes: "{{ default_volumes + migration_path|default([]) }}"
     labels:
       traefik.enable: "true"
-      traefik.http.routers.nzbhydra2.entrypoints: "http"
-      traefik.http.routers.nzbhydra2.rule: "Host:nzbhydra2.{{ user.domain }}"
-      traefik.http.routers.nzbhydra2.middlewares: "https-redirect@file"
-      traefik.http.routers.nzbhydra2-secure.entrypoints: "https"
-      traefik.http.routers.nzbhydra2-secure.rule: "Host:nzbhydra2.{{ user.domain }}"
-      traefik.http.routers.nzbhydra2-secure.tls: "true"
-      traefik.http.routers.nzbhydra2-secure.tls.certresolver: "http"
-      traefik.http.routers.nzbhydra2-secure.service: "nzbhydra2"
-      traefik.http.services.nzbhydra2.loadbalancer.server.port: "5076"
+      traefik.backend: "nzbhydra2"
+      traefik.frontend.redirect.entryPoint: "https"
+      traefik.frontend.rule: "Host:nzbhydra2.{{ user.domain }}"
+      traefik.port: "5076"
+      traefik.frontend.auth.basic: "{{ htpasswd }}"
       traefik.docker.network: "cloudbox"
       "com.github.cloudbox.cloudbox_managed": "true"
+#    labels:
+#      traefik.enable: "true"
+#      traefik.http.routers.nzbhydra2.entrypoints: "http"
+#      traefik.http.routers.nzbhydra2.rule: "Host:nzbhydra2.{{ user.domain }}"
+#      traefik.http.routers.nzbhydra2.middlewares: "https-redirect@file"
+#      traefik.http.routers.nzbhydra2-secure.entrypoints: "https"
+#      traefik.http.routers.nzbhydra2-secure.rule: "Host:nzbhydra2.{{ user.domain }}"
+#      traefik.http.routers.nzbhydra2-secure.tls: "true"
+#      traefik.http.routers.nzbhydra2-secure.tls.certresolver: "http"
+#      traefik.http.routers.nzbhydra2-secure.service: "nzbhydra2"
+#      traefik.http.services.nzbhydra2.loadbalancer.server.port: "5076"
+#      traefik.docker.network: "cloudbox"
+#      "com.github.cloudbox.cloudbox_managed": "true"
     networks:
       - name: cloudbox
         aliases:

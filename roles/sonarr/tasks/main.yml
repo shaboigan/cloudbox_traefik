@@ -19,7 +19,7 @@
 
 - name: Slurp hashed htpasswd
   slurp:
-    src: "/opt/traefik_v2/.htpasswd"
+    src: "/opt/traefik_v1/.htpasswd"
   register: hashed
 
 - name: Set hashed password
@@ -66,17 +66,26 @@
     devices: "{{ '/dev/dri:/dev/dri' if (gpu.intel and dev_dri.stat.exists) | default(false) else omit }}"
     labels:
       traefik.enable: "true"
-      traefik.http.routers.sonarr.entrypoints: "http"
-      traefik.http.routers.sonarr.rule: "Host:sonarr.{{ user.domain }}"
-      traefik.http.routers.sonarr.middlewares: "https-redirect@file"
-      traefik.http.routers.sonarr-secure.entrypoints: "https"
-      traefik.http.routers.sonarr-secure.rule: "Host:sonarr.{{ user.domain }}"
-      traefik.http.routers.sonarr-secure.tls: "true"
-      traefik.http.routers.sonarr-secure.tls.certresolver: "http"
-      traefik.http.routers.sonarr-secure.service: "sonarr"
-      traefik.http.services.sonarr.loadbalancer.server.port: "8989"
+      traefik.backend: "sonarr"
+      traefik.frontend.redirect.entryPoint: "https"
+      traefik.frontend.rule: "Host:sonarr.{{ user.domain }}"
+      traefik.port: "8989"
+      traefik.frontend.auth.basic: "{{ htpasswd }}"
       traefik.docker.network: "cloudbox"
       "com.github.cloudbox.cloudbox_managed": "true"
+#    labels:
+#      traefik.enable: "true"
+#      traefik.http.routers.sonarr.entrypoints: "http"
+#      traefik.http.routers.sonarr.rule: "Host:sonarr.{{ user.domain }}"
+#      traefik.http.routers.sonarr.middlewares: "https-redirect@file"
+#      traefik.http.routers.sonarr-secure.entrypoints: "https"
+#      traefik.http.routers.sonarr-secure.rule: "Host:sonarr.{{ user.domain }}"
+#      traefik.http.routers.sonarr-secure.tls: "true"
+#      traefik.http.routers.sonarr-secure.tls.certresolver: "http"
+#      traefik.http.routers.sonarr-secure.service: "sonarr"
+#      traefik.http.services.sonarr.loadbalancer.server.port: "8989"
+#      traefik.docker.network: "cloudbox"
+#      "com.github.cloudbox.cloudbox_managed": "true"
     networks:
       - name: cloudbox
         aliases:
