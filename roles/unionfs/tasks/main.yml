@@ -1,0 +1,54 @@
+#########################################################################
+# Title:         Cloudbox: UnionFS Role                                 #
+# Author(s):     desimaniac                                             #
+# URL:           https://github.com/cloudbox/cloudbox                   #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+# Variables
+
+- name: Variables Task
+  import_tasks: "subtasks/variables.yml"
+
+# Stop Docker Containers
+
+- name: Docker Containers Stop Tasks
+  import_tasks: "subtasks/docker/containers_stop.yml"
+  when: (('mounts' in ansible_run_tags) or ('mounts_override' in ansible_run_tags)) and (not use_remote)
+
+# Existing Setup
+
+- name: Legacy Tasks
+  import_tasks: "subtasks/legacy.yml"
+
+- name: Service Tasks
+  include_tasks: "subtasks/services.yml"
+  loop_control:
+    loop_var: outer_item
+  loop: "{{ service_files }}"
+
+- name: Mount Path Tasks
+  import_tasks: "subtasks/mount_path.yml"
+
+# New Setup
+
+- name: Basic Tasks
+  import_tasks: "subtasks/basics.yml"
+
+# Mount UnionFS
+
+- name: Mount UnionFS Tasks
+  include_tasks: "subtasks/mounts/{{ unionfs_mount_type }}.yml"
+
+- name: Docker Daemon Tasks
+  import_tasks: "subtasks/docker/daemon.yml"
+  when: ('mounts' in ansible_run_tags) or ('mounts_override' in ansible_run_tags)
+
+# Start Docker Containers
+
+- name: Docker Containers Start Tasks
+  import_tasks: "subtasks/docker/containers_start.yml"
+  when: ('mounts' in ansible_run_tags) or ('mounts_override' in ansible_run_tags)

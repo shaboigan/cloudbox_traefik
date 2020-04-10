@@ -1,0 +1,38 @@
+---
+system:
+  timezone: auto
+docker:
+  repo: edge
+  version: latest
+rclone:
+  config: 
+  remote: 
+mounts:
+  unionfs: mergerfs
+  remote: rclone_vfs
+vpn:
+  enable: no
+  port: 
+  config: 
+plex:
+  open_main_ports: no
+  open_extra_ports: no
+  force_auto_adjust_quality: no
+  force_high_output_bitrates: no
+  db_cache_size: default
+ombi:
+  subdomain: ombi
+tautulli:
+  subdomain: tautulli
+traefik:
+  subdomain: traefik
+vnc:
+  subdomain: vnc
+gpu:
+  intel: yes
+  nvidia:
+    enabled: no
+    driver: 418.30
+hetzner_nfs:
+  vlan_id: 4000
+  mount_client: 3

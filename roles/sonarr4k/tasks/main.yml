@@ -1,0 +1,86 @@
+#########################################################################
+# Title:            Cloudbox: sonarr4k Role                             #
+# Author(s):        l3uddz, desimaniac                                  #
+# URL:              https://github.com/cloudbox/cloudbox                #
+# Docker Image(s):  hotio/sonarr4k,                                     #
+#                   andrewkhunn/suitarr_mp4_automator                   #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+- name: "Set DNS Record on CloudFlare"
+  include_role:
+    name: cloudflare-dns
+  vars:
+    subdomain: sonarr4k
+  when: cloudflare_enabled
+
+- name: Slurp hashed htpasswd
+  slurp:
+    src: "/opt/traefik_v2/.htpasswd"
+  register: hashed
+
+- name: Set hashed password
+  set_fact:
+    htpasswd: "{{ hashed['content'] | b64decode }}"
+
+- name: Stop and remove any existing container
+  docker_container:
+    name: sonarr4k
+    state: absent
+
+- name: Create sonarr4k directories
+  file: "path={{ item }} state=directory mode=0775 owner={{ user.name }} group={{ user.name }}"
+  with_items:
+    - /opt/sonarr4k
+
+- name: "Check if '/dev/dri' exists"
+  stat:
+    path: "/dev/dri"
+  register: dev_dri
+
+- name: Set 'default_volumes' variable
+  set_fact:
+    default_volumes:
+      - "/opt/sonarr4k:/config"
+      - "/opt/scripts:/scripts"
+      - "/mnt:/mnt"
+      - "/mnt/unionfs/Media/TV:/tv"
+
+- name: Create and start container
+  docker_container:
+    name: sonarr4k
+    image: "hotio/sonarr4k"
+    pull: yes
+    published_ports:
+      - "127.0.0.1:8990:8989"
+    env:
+      BACKUP: "no"
+      PUID: "{{ uid }}"
+      PGID: "{{ gid }}"
+      UMASK: 002
+      TZ: "{{ tz }}"
+    volumes: "{{ default_volumes + nzbs_downloads_path|default([]) + torrents_downloads_path|default([]) }}"
+    devices: "{{ '/dev/dri:/dev/dri' if (gpu.intel and dev_dri.stat.exists) | default(false) else omit }}"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.sonarr4k.entrypoints: "http"
+      traefik.http.routers.sonarr4k.rule: "Host:sonarr4k.{{ user.domain }}"
+      traefik.http.routers.sonarr4k.middlewares: "https-redirect@file"
+      traefik.http.routers.sonarr4k-secure.entrypoints: "https"
+      traefik.http.routers.sonarr4k-secure.rule: "Host:sonarr4k.{{ user.domain }}"
+      traefik.http.routers.sonarr4k-secure.tls: "true"
+      traefik.http.routers.sonarr4k-secure.tls.certresolver: "http"
+      traefik.http.routers.sonarr4k-secure.service: "sonarr4k"
+      traefik.http.services.sonarr4k.loadbalancer.server.port: "8989"
+      traefik.docker.network: "cloudbox"
+      "com.github.cloudbox.cloudbox_managed": "true"
+    networks:
+      - name: cloudbox
+        aliases:
+          - sonarr4k
+    purge_networks: yes
+    restart_policy: unless-stopped
+    state: started

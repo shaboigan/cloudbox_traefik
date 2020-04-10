@@ -1,0 +1,20 @@
+#########################################################################
+# Title:         Cloudbox: Cloudflare | Page Rules Task                 #
+# Author(s):     desimaniac                                             #
+# URL:           https://github.com/cloudbox/cloudbox                   #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+# Delete any existing CF Page Rules for Lets Encrypt
+
+- name: Page Rules | Destroy Page Rules Task
+  import_tasks: "page_rules/destroy.yml"
+  when: (cloudflare_page_rules | length > 0)
+
+# Create new CF Page Rule for Lets Encrypt
+
+- name: Page Rules | Create Page Rules Task
+  import_tasks: "page_rules/create.yml"

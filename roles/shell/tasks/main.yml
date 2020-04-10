@@ -1,0 +1,16 @@
+#########################################################################
+# Title:         Cloudbox: Shell Role                                   #
+# Author(s):     desimaniac, l3uddz                                     #
+# URL:           https://github.com/cloudbox/cloudbox                   #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+- name: Set 'shell_type' variable
+  set_fact:
+    shell_type: "{{ shell | default('zsh',true) }}"
+
+- name: Import '{{ shell_type }}' subtask
+  include_tasks: "subtasks/{{ shell_type }}.yml"

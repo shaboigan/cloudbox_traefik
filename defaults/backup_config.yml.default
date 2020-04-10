@@ -1,0 +1,15 @@
+---
+local:
+  enable: yes
+  destination: /mnt/local/Backups/{{ ( cloudbox_type | default('Cloudbox',true) ) }}
+rclone:
+  enable: yes
+  destination: google:/Backups/{{ ( cloudbox_type | default('Cloudbox',true) ) }}
+cron:
+  cron_time: weekly
+  cron_state: absent
+restore_service:
+  user:
+  pass:
+misc:
+  snapshot: true

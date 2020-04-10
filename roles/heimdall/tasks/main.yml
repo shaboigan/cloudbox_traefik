@@ -1,0 +1,61 @@
+#########################################################################
+# Title:         Cloudbox: Heimdall Role                                #
+# Author(s):     TheBradz, desimaniac                                   #
+# URL:           https://github.com/cloudbox/cloudbox                   #
+# Docker Image:  linuxserver/heimdall                                   #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+- name: "Set DNS Record on CloudFlare"
+  include_role:
+    name: cloudflare-dns
+  vars:
+    subdomain: heimdall
+  when: cloudflare_enabled
+
+- name: Stop and remove any existing container
+  docker_container:
+    name: heimdall
+    state: absent
+
+- name: Create heimdall directories
+  file: "path={{ item }} state=directory mode=0775 owner={{ user.name }} group={{ user.name }}"
+  with_items:
+    - /opt/heimdall
+
+- name: Create and start container
+  docker_container:
+    name: heimdall
+    image: linuxserver/heimdall
+    pull: yes
+    published_ports:
+      - "127.0.0.1:8078:443"
+    env:
+      PUID: "{{ uid }}"
+      PGID: "{{ gid }}"
+    volumes:
+      - "/etc/localtime:/etc/localtime:ro"
+      - "/opt/heimdall:/config"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.heimdall.entrypoints: "http"
+      traefik.http.routers.heimdall.rule: "Host:heimdall.{{ user.domain }}"
+      traefik.http.routers.heimdall.middlewares: "https-redirect@file"
+      traefik.http.routers.heimdall-secure.entrypoints: "https"
+      traefik.http.routers.heimdall-secure.rule: "Host:heimdall.{{ user.domain }}"
+      traefik.http.routers.heimdall-secure.tls: "true"
+      traefik.http.routers.heimdall-secure.tls.certresolver: "http"
+      traefik.http.routers.heimdall-secure.service: "heimdall"
+      traefik.http.services.heimdall.loadbalancer.server.port: "443"
+      traefik.docker.network: "cloudbox"
+      "com.github.cloudbox.cloudbox_managed": "true"
+    networks:
+      - name: cloudbox
+        aliases:
+          - heimdall
+    purge_networks: yes
+    restart_policy: unless-stopped
+    state: started

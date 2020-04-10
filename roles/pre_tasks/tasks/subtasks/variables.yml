@@ -1,0 +1,165 @@
+#########################################################################
+# Title:         Pre-Tasks: Variables Task                              #
+# Author(s):     desimaniac                                             #
+# URL:           https://github.com/cloudbox/cloudbox                   #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+# Needed again for cloudbox_mod.
+- name: "Variables | Set 'continuous_integration' variable"
+  set_fact:
+    continuous_integration: "{{ continuous_integration | default(false,true) }}"
+
+- name: "Variables | Set 'cloudflare_enabled' variable"
+  set_fact:
+    cloudflare_enabled: "{{ true if not(
+        (cloudflare is undefined)
+        or
+        (cloudflare is none)
+        or
+        (cloudflare | trim | length == 0)
+        or
+        (cloudflare.email is undefined)
+        or
+        (cloudflare.email is none)
+        or
+        (cloudflare.email | trim | length == 0)
+        or
+        (cloudflare.api is undefined)
+        or
+        (cloudflare.api is none)
+        or
+        (cloudflare.api | trim | length == 0)
+      )
+        else false }}"
+
+- name: "Variables | Set 'plex_account_enabled' variable"
+  set_fact:
+    plex_account_enabled: "{{ true if not(
+        (plex is undefined)
+        or
+        (plex is none)
+        or
+        (plex | trim | length == 0)
+        or
+        (plex.user is undefined)
+        or
+        (plex.user is none)
+        or
+        (plex.user | trim | length == 0)
+        or
+        (plex.pass is undefined)
+        or
+        (plex.pass is none)
+        or
+        (plex.pass | trim | length == 0)
+      )
+      else false }}"
+
+- name: "Variables | Set 'nzbs_downloads_path' variable"
+  set_fact:
+    nzbs_downloads_path:
+      - "{{ downloads.nzbs }}:/downloads/nzbs"
+  when: not (
+        (downloads is undefined)
+        or
+        (downloads is none)
+        or
+        (downloads | trim | length == 0)
+        or
+        (downloads.nzbs is undefined)
+        or
+        (downloads.nzbs is none)
+        or
+        (downloads.nzbs | trim | length == 0)
+      )
+
+- name: "Variables | Set 'torrents_downloads_path' variable"
+  set_fact:
+    torrents_downloads_path:
+      - "{{ downloads.torrents }}:/downloads/torrents"
+  when: not (
+        (downloads is undefined)
+        or
+        (downloads is none)
+        or
+        (downloads | trim | length == 0)
+        or
+        (downloads.torrents is undefined)
+        or
+        (downloads.torrents is none)
+        or
+        (downloads.torrents | trim | length == 0)
+      )
+
+- name: Variables | Check if 'system.timezone' was specified
+  set_fact:
+    system_timezone_specified: "{{ true if not (
+        (system is undefined)
+        or
+        (system is none)
+        or
+        (system | trim | length == 0)
+        or
+        (system.timezone is undefined)
+        or
+        (system.timezone is none)
+        or
+        (system.timezone | trim | length == 0)
+        or
+        (system.timezone | lower == 'auto')
+      )
+      else false }}"
+
+- name: Variables | Set 'tz' variable to custom timezone
+  set_fact:
+    tz: "{{ system.timezone }}"
+  when: (system_timezone_specified)
+
+- name: Variables | Auto timezone tasks
+  block:
+
+  - name: Variables | Get time zone from 'http://ip-api.com'
+    uri:
+      url: http://ip-api.com/line?fields=timezone
+      return_content: yes
+    register: ip_api_timezone_response
+    ignore_errors: yes
+
+  - name: Variables | Set 'tz' variable from 'http://ip-api.com'
+    set_fact:
+      tz: "{{ ip_api_timezone_response.content | trim }}"
+    when: (ip_api_timezone_response is succeeded)
+
+  - name: Variables | Get timezone from local machine
+    block:
+
+    - name: Variables | Check to see if '/etc/timezone' exists
+      stat:
+        path: /etc/timezone
+      register: etc_timezone
+
+    - name: Variables | Set timezone from local machine
+      block:
+
+      - name: Variables | Get info from '/etc/timezone'
+        shell: cat /etc/timezone
+        register: etc_timezone_contents
+
+      - name: Variables | Set 'tz' variable to '/etc/timezone'
+        set_fact:
+          tz: "{{ etc_timezone_contents.stdout | trim }}"
+
+      when: (etc_timezone.stat.exists and etc_timezone.stat.isreg)
+
+    - name: Variables | Set 'tz' variable to fallback value of 'Etc/UTC'
+      set_fact:
+        tz: "Etc/UTC"
+      when: not (etc_timezone.stat.exists and etc_timezone.stat.isreg)
+
+    when: (ip_api_timezone_response is failed)
+
+  when: (not system_timezone_specified)

@@ -1,0 +1,92 @@
+#########################################################################
+# Title:         Cloudbox: Plex Role                                    #
+# Author(s):     l3uddz, desimaniac                                     #
+# URL:           https://github.com/cloudbox/cloudbox                   #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+- name: "Set DNS Record on CloudFlare"
+  include_role:
+    name: cloudflare-dns
+  vars:
+    subdomain: "{{ plex_subdomain }}"
+  when: cloudflare_enabled
+
+- name: "Create Plex directories"
+  file: "path={{ item }} state=directory mode=0775 owner={{ user.name }} group={{ user.name }}"
+  with_items: "{{ plex_folders }}"
+
+- name: "Stop and remove any existing container"
+  docker_container:
+    name: plex
+    state: absent
+
+- name: "Pull Plex Docker image"
+  docker_image:
+    name: "{{ plex_docker_image }}"
+
+- name: "Check if '/dev/dri' exists"
+  stat:
+    path: "/dev/dri"
+  register: dev_dri
+
+- name: Preferences Tasks
+  import_tasks: "subtasks/preferences/preferences.yml"
+  when: (not continuous_integration)
+
+- name: "Create and start container"
+  docker_container:
+    name: plex
+    image: "{{ plex_docker_image }}"
+    pull: yes
+    published_ports: "{{ plex_docker_ports }}"
+    env:
+      PLEX_UID: "{{ uid }}"
+      PLEX_GID: "{{ gid }}"
+      PLEX_CLAIM: "{{ (plex_claim_code) | default(omit) }}"
+      CHANGE_CONFIG_DIR_OWNERSHIP: false
+      ADVERTISE_IP: "http://plex.{{ user.domain }}:80/,https://plex.{{ user.domain }}:443/"
+      HEALTHCHECK_MOUNT: /mnt/unionfs
+      NVIDIA_DRIVER_CAPABILITIES: "{{ 'compute,video,utility' if (gpu.nvidia.enabled) | default(false) else omit }}"
+      NVIDIA_VISIBLE_DEVICES: "{{ 'all' if (gpu.nvidia.enabled) | default(false) else omit }}"
+      TZ: "{{ tz }}"
+    volumes: "{{ plex_docker_volumes }}"
+    devices: "{{ '/dev/dri:/dev/dri' if (gpu.intel and dev_dri.stat.exists) | default(false) else omit }}"
+    etc_hosts: "{{ plex_docker_hosts }}"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.plex.entrypoints: "http"
+      traefik.http.routers.plex.rule: "Host:plex.{{ user.domain }}"
+      traefik.http.routers.plex.middlewares: "https-redirect@file"
+      traefik.http.routers.plex-secure.entrypoints: "https"
+      traefik.http.routers.plex-secure.rule: "Host:plex.{{ user.domain }}"
+      traefik.http.routers.plex-secure.tls: "true"
+      traefik.http.routers.plex-secure.tls.certresolver: "http"
+      traefik.http.routers.plex-secure.service: "plex"
+      traefik.http.services.plex.loadbalancer.server.port: "32400"
+      traefik.docker.network: "cloudbox"
+      "com.github.cloudbox.cloudbox_managed": "true"
+    networks:
+      - name: cloudbox
+        aliases:
+          - plex
+    purge_networks: yes
+    restart_policy: unless-stopped
+    state: started
+
+# Sometimes docker will set transcodes folder to root after a restore.
+- name: "Ensure transcodes folder has the correct permissions"
+  file:
+    path: "{{ plex.transcodes }}"
+    owner: "{{ user.name }}"
+    group: "{{ user.name }}"
+    mode: 0775
+    recurse: yes
+
+- name: Extra Tasks
+  import_tasks: "subtasks/extra.yml"
+  ignore_errors: yes
+  tags: plex-extra-tasks

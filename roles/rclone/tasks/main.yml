@@ -1,0 +1,25 @@
+#########################################################################
+# Title:         Cloudbox: Rclone Role                                  #
+# Author(s):     l3uddz, desimaniac                                     #
+# URL:           https://github.com/cloudbox/cloudbox                   #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+- name: Uninstall Legacy Rclone Tasks
+  include_tasks: "uninstall_legacy_rclone.yml"
+
+- name: Build URL Tasks
+  import_tasks: "build_url.yml"
+
+- name: Install Binary Tasks
+  import_tasks: "install_binary.yml"
+
+- name: Import Existing Config Tasks
+  import_tasks: "import_config.yml"
+
+- name: Preinstall Tasks
+  include_tasks: "preinstall.yml"
+  when: ('preinstall' in ansible_run_tags)

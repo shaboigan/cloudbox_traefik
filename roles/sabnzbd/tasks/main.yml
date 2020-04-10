@@ -1,0 +1,112 @@
+#########################################################################
+# Title:         Cloudbox: SABnzbd Role                                 #
+# Author(s):     desimaniac                                             #
+# URL:           https://github.com/cloudbox/cloudbox                   #
+# Docker Image:  hotio/sabnzbd                                          #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+- name: "Set DNS Record on CloudFlare"
+  include_role:
+    name: cloudflare-dns
+  vars:
+    subdomain: sabnzbd
+  when: cloudflare_enabled
+
+- name: Stop and remove any existing container
+  docker_container:
+    name: sabnzbd
+    state: absent
+
+- name: Create sabnzbd directories
+  file: "path={{ item }} state=directory mode=0775 owner={{ user.name }} group={{ user.name }} recurse=yes"
+  with_items:
+    - /opt/sabnzbd
+    - /opt/sabnzbd/openvpn    
+    - "{{ downloads.nzbs }}"
+    - "{{ downloads.nzbs }}/sabnzbd"
+    - "{{ downloads.nzbs }}/sabnzbd/complete"
+    - "{{ downloads.nzbs }}/sabnzbd/incomplete"
+    - "{{ downloads.nzbs }}/sabnzbd/watched"
+    - "{{ downloads.nzbs }}/sabnzbd/logs"
+
+- name: Openvpn configuration
+  block:
+
+  - name: Check if opvn config file exists
+    stat:
+      path: "/opt/sabnzbd/openvpn/config.ovpn"
+    register: config_ovpn
+
+  - name: Import 'openvpn config'
+    shell: "curl -Lo /opt/sabnzbd/openvpn/config.ovpn '{{ vpn.config }}'"
+    become: yes
+    become_user: "{{ user.name }}"
+    when: not config_ovpn.stat.exists
+
+  when: (vpn.enable|default(false,true))
+
+- name: Check sabnzbd.ini exists
+  stat:
+    path: "/opt/sabnzbd/app/sabnzbd.ini"
+  register: sabnzbd_ini
+
+- name: Set default_volumes variable
+  set_fact:
+    default_volumes:
+      - "/etc/localtime:/etc/localtime:ro"      
+      - "/opt/sabnzbd:/config"
+      - "/opt/scripts:/scripts"
+      - "/mnt:/mnt"
+
+- name: Create and start container
+  docker_container:
+    name: sabnzbd
+    image: "binhex/arch-sabnzbdvpn"
+    pull: yes
+    capabilities:
+      - NET_ADMIN
+    published_ports:
+      - "127.0.0.1:8081:8080"
+    env:
+      PUID: "{{ uid }}"
+      PGID: "{{ gid }}"
+      UMASK: "000"
+      VPN_ENABLED: "{{ vpn.enabled }}"
+      VPN_PROV: "airvpn"
+      ENABLE_PRIVOXY: "no"
+      LAN_NETWORK: "172.18.0.0/16"
+      NAME_SERVERS: "209.222.18.222,84.200.69.80,37.235.1.174,1.1.1.1,209.222.18.218,37.235.1.177,84.200.70.40,1.0.0.1"
+      DEBUG: "false"
+    volumes: "{{ default_volumes + torrents_downloads_path|default([]) }}"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.sabnzbd.entrypoints: "http"
+      traefik.http.routers.sabnzbd.rule: "Host:sabnzbd.{{ user.domain }}"
+      traefik.http.routers.sabnzbd.middlewares: "https-redirect@file"
+      traefik.http.routers.sabnzbd-secure.entrypoints: "https"
+      traefik.http.routers.sabnzbd-secure.rule: "Host:sabnzbd.{{ user.domain }}"
+      traefik.http.routers.sabnzbd-secure.tls: "true"
+      traefik.http.routers.sabnzbd-secure.tls.certresolver: "http"
+      traefik.http.routers.sabnzbd-secure.service: "sabnzbd"
+      traefik.http.services.sabnzbd.loadbalancer.server.port: "8080"
+      traefik.docker.network: "cloudbox"
+      "com.github.cloudbox.cloudbox_managed": "true"
+    networks:
+      - name: cloudbox
+        aliases:
+          - sabnzbd
+    purge_networks: yes
+    restart_policy: unless-stopped
+    state: started
+
+- name: Settings Tweaks
+  include_tasks: "subtasks/sabnzbd_settings.yml"
+  when: not (
+        (sabnzbd_ini.stat.exists)
+        or
+        (continuous_integration)
+    )

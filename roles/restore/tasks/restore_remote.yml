@@ -1,0 +1,82 @@
+#########################################################################
+# Title:         Restore: Remote Restore Task                           #
+# Author(s):     desimaniac                                             #
+# URL:           https://github.com/cloudbox/cloudbox                   #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+# Checks
+
+- name: Fail when no backup method is enabled or when no local backup exists
+  fail:
+    msg:
+      - "Rclone is not enabled and no local backup exists."
+      - "You must either enable rclone, in the backup settings, or provide backup tarball files locally, to perform a restore."
+  when: not (rclone.enable)
+
+# Folder
+
+- name: Cleanup backup location
+  shell: "rm -rf {{ local.destination }}/*"
+  become: yes
+  become_user: "{{ user.name }}"
+
+# Rclone
+
+- name: "Check if 'rclone.conf' exists in '{{ playbook_dir }}' folder"
+  stat:
+    path: "{{ playbook_dir }}/rclone.conf"
+  register: rclone_conf_playbook_dir
+
+- name: Check if rclone is installed
+  stat:
+    path: "/usr/bin/rclone"
+  register: rclone_binary
+
+- name: Run rclone role
+  include_role:
+    name: rclone
+  when: (rclone_conf_playbook_dir.stat.exists) or (not rclone_binary.stat.exists)
+
+- name: Test rclone remote destination
+  shell: |
+    /usr/bin/rclone lsd {{ rclone.destination }} \
+      --user-agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.131 Safari/537.36'
+  become: yes
+  become_user: "{{ user.name }}"
+  register: rclone_test
+  failed_when: (rclone_test.rc > 5)
+
+- name: "Fail when rclone is misconfigured."
+  fail: msg="The rclone remote is misconfigured - You must place a valid 'rclone.conf' file in '{{ playbook_dir }}' (or setup Rclone via 'rclone config') and verify that the 'rclone.destination' in settings is valid."
+  when: (rclone_test.rc > 0)
+
+- name: "Fetch backup from '{{ rclone.destination }}'"
+  shell: |
+    /usr/bin/rclone copy \
+      --user-agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.131 Safari/537.36' \
+      --transfers=4 \
+      --drive-chunk-size=128M \
+      --exclude 'archived/**' \
+      --stats=30s \
+      -vv \
+      --log-file='{{ playbook_dir }}/restore_rclone.log' \
+      '{{ rclone.destination }}/' '{{ local.destination }}'
+  become: yes
+  become_user: "{{ user.name }}"
+
+# Checks
+
+- name: "Check if tar files were retrieved"
+  find:
+    paths: "{{ local.destination }}/opt"
+    file_type: file
+    patterns: '*.tar'
+  register: dir_files2
+
+- name: "Fail if tar files are missing"
+  fail: msg="There must have been an issue retrieving the tar files as they are missing in '{{ local.destination }}/opt/'"
+  when: (dir_files2.matched|int == 0)

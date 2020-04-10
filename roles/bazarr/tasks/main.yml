@@ -1,0 +1,76 @@
+#########################################################################
+# Title:         Cloudbox: Bazarr Role                                  #
+# Author(s):     desimaniac                                             #
+# URL:           https://github.com/cloudbox/cloudbox                   #
+# Docker Image:  hotio/bazarr                                           #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+- name: "Set DNS Record on CloudFlare"
+  include_role:
+    name: cloudflare-dns
+  vars:
+    subdomain: bazarr
+  when: cloudflare_enabled
+
+- name: Slurp hashed htpasswd
+  slurp:
+    src: "/opt/traefik_v2/.htpasswd"
+  register: hashed
+
+- name: Set hashed password
+  set_fact:
+    htpasswd: "{{ hashed['content'] | b64decode }}"
+
+- name: Stop and remove any existing container
+  docker_container:
+    name: bazarr
+    state: absent
+
+- name: Create bazarr directories
+  file: "path={{ item }} state=directory mode=0775 owner={{ user.name }} group={{ user.name }}"
+  with_items:
+    - /opt/bazarr
+
+- name: Create and start container
+  docker_container:
+    name: bazarr
+    image: "hotio/bazarr"
+    pull: yes
+    published_ports:
+      - "127.0.0.1:6767:6767"
+    env:
+      BACKUP: "no"
+      PUID: "{{ uid }}"
+      PGID: "{{ gid }}"
+      UMASK: 002
+      TZ: "{{ tz }}"
+    volumes:
+      - "/opt/bazarr:/config"
+      - "/mnt/unionfs/Media/TV:/tv"
+      - "/mnt/unionfs/Media/Movies:/movies"
+      - "/mnt:/mnt"
+      - "/opt/scripts:/scripts"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.bazarr.entrypoints: "http"
+      traefik.http.routers.bazarr.rule: "Host:bazarr.{{ user.domain }}"
+      traefik.http.routers.bazarr.middlewares: "https-redirect@file"
+      traefik.http.routers.bazarr-secure.entrypoints: "https"
+      traefik.http.routers.bazarr-secure.rule: "Host:bazarr.{{ user.domain }}"
+      traefik.http.routers.bazarr-secure.tls: "true"
+      traefik.http.routers.bazarr-secure.tls.certresolver: "http"
+      traefik.http.routers.bazarr-secure.service: "bazarr"
+      traefik.http.services.bazarr.loadbalancer.server.port: "6767"
+      traefik.docker.network: "cloudbox"
+      "com.github.cloudbox.cloudbox_managed": "true"
+    networks:
+      - name: cloudbox
+        aliases:
+          - bazarr
+    purge_networks: yes
+    restart_policy: unless-stopped
+    state: started

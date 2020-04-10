@@ -1,0 +1,21 @@
+#########################################################################
+# Title:         Cloudbox: Settings Role                                #
+# Author(s):     desimaniac                                             #
+# URL:           https://github.com/cloudbox/cloudbox                   #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+- name: "Settings | Start"
+  include_tasks: "subtasks/start.yml"
+
+- name: "Settings | Main 2"
+  include_tasks: "main2.yml"
+  loop: "{{ config_files }}"
+  loop_control:
+    loop_var: outer_item
+
+- name: "Settings | Finish"
+  include_tasks: "subtasks/finish.yml"

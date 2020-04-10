@@ -1,0 +1,70 @@
+#########################################################################
+# Title:         Cloudbox: Tautulli Role                                  #
+# Author(s):     l3uddz, desimaniac                                     #
+# URL:           https://github.com/cloudbox/cloudbox                   #
+# Docker Image:  tautulli/tautulli                                      #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+- name: "Set DNS Record on CloudFlare"
+  include_role:
+    name: cloudflare-dns
+  vars:
+    subdomain: tautulli
+  when: cloudflare_enabled
+
+- name: Stop and remove any existing container
+  docker_container:
+    name: tautulli
+    state: absent
+
+- name: Wait for Plex Logs folder to be created by Plex
+  wait_for:
+    path: "/opt/plex/Library/Application Support/Plex Media Server/Logs"
+    state: present
+  when: (not continuous_integration)
+
+- name: Create tautulli directories
+  file: "path={{ item }} state=directory mode=0775 owner={{ user.name }} group={{ user.name }}"
+  with_items:
+    - /opt/tautulli
+    - /opt/scripts/tautulli
+
+- name: Create and start container
+  docker_container:
+    name: tautulli
+    image: "hotio/jackett"
+    pull: yes
+    published_ports:
+      - "127.0.0.1:8181:8181"
+    env:
+      PUID: "{{ uid }}"
+      PGID: "{{ gid }}"
+      TZ: "{{ tz }}"
+    volumes:
+      - "/opt/tautulli:/config"
+      - "/opt/plex/Library/Application Support/Plex Media Server/Logs:/logs:ro"
+      - "/opt/scripts:/scripts"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.tautulli.entrypoints: "http"
+      traefik.http.routers.tautulli.rule: "Host:tautulli.{{ user.domain }}"
+      traefik.http.routers.tautulli.middlewares: "https-redirect@file"
+      traefik.http.routers.tautulli-secure.entrypoints: "https"
+      traefik.http.routers.tautulli-secure.rule: "Host:tautulli.{{ user.domain }}"
+      traefik.http.routers.tautulli-secure.tls: "true"
+      traefik.http.routers.tautulli-secure.tls.certresolver: "http"
+      traefik.http.routers.tautulli-secure.service: "tautulli"
+      traefik.http.services.tautulli.loadbalancer.server.port: "8181"
+      traefik.docker.network: "cloudbox"
+      "com.github.cloudbox.cloudbox_managed": "true"
+    networks:
+      - name: cloudbox
+        aliases:
+          - tautulli
+    purge_networks: yes
+    restart_policy: unless-stopped
+    state: started

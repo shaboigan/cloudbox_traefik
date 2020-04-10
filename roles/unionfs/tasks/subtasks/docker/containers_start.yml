@@ -1,0 +1,14 @@
+#########################################################################
+# Title:         Cloudbox: UnionFS | Docker | Container Start Tasks     #
+# Author(s):     desimaniac                                             #
+# URL:           https://github.com/cloudbox/cloudbox                   #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+- name: "Docker | Containers Start | Start all previously running Docker containers"
+  shell: "docker start {{ containers_list }}"
+  ignore_errors: yes
+  when: (containers_list | trim | length > 0)

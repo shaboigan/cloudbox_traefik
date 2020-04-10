@@ -1,0 +1,90 @@
+#########################################################################
+# Title:         Cloudbox: NZBHydra2 Role                               #
+# Author(s):     desimaniac                                             #
+# URL:           https://github.com/cloudbox/cloudbox                   #
+# Docker Image:  hotio/nzbhydra2                                        #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+- name: "Set DNS Record on CloudFlare"
+  include_role:
+    name: cloudflare-dns
+  vars:
+    subdomain: nzbhydra2
+  when: cloudflare_enabled
+
+- name: Slurp hashed htpasswd
+  slurp:
+    src: "/opt/traefik_v2/.htpasswd"
+  register: hashed
+
+- name: Set hashed password
+  set_fact:
+    htpasswd: "{{ hashed['content'] | b64decode }}"
+
+- name: Stop and remove any existing container
+  docker_container:
+    name: nzbhydra2
+    state: absent
+
+- name: Create nzbhydra2 directories
+  file: "path={{ item }} state=directory mode=0775 owner={{ user.name }} group={{ user.name }}"
+  with_items:
+    - /opt/nzbhydra2
+
+- name: Check if nzbhydra.yml exists
+  stat:
+    path: "/opt/nzbhydra2/app/nzbhydra.yml"
+  register: nzbhydra2_yml
+
+- name: Set default_volumes variable
+  set_fact:
+    default_volumes:
+      - "/opt/nzbhydra2:/config"
+      - "/mnt:/mnt"
+
+- name: Create and start container
+  docker_container:
+    name: nzbhydra2
+    image: hotio/nzbhydra2
+    pull: yes
+    published_ports:
+      - "127.0.0.1:5076:5076"
+    env:
+      BACKUP: "no"
+      PUID: "{{ uid }}"
+      PGID: "{{ gid }}"
+      UMASK: 002
+      TZ: "{{ tz }}"
+    volumes: "{{ default_volumes + migration_path|default([]) }}"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.nzbhydra2.entrypoints: "http"
+      traefik.http.routers.nzbhydra2.rule: "Host:nzbhydra2.{{ user.domain }}"
+      traefik.http.routers.nzbhydra2.middlewares: "https-redirect@file"
+      traefik.http.routers.nzbhydra2-secure.entrypoints: "https"
+      traefik.http.routers.nzbhydra2-secure.rule: "Host:nzbhydra2.{{ user.domain }}"
+      traefik.http.routers.nzbhydra2-secure.tls: "true"
+      traefik.http.routers.nzbhydra2-secure.tls.certresolver: "http"
+      traefik.http.routers.nzbhydra2-secure.service: "nzbhydra2"
+      traefik.http.services.nzbhydra2.loadbalancer.server.port: "5076"
+      traefik.docker.network: "cloudbox"
+      "com.github.cloudbox.cloudbox_managed": "true"
+    networks:
+      - name: cloudbox
+        aliases:
+          - nzbhydra2
+    purge_networks: yes
+    restart_policy: unless-stopped
+    state: started
+
+- name: Settings Tweaks
+  include_tasks: "subtasks/nzbhydra2_settings.yml"
+  when: not (
+        (nzbhydra2_yml.stat.exists)
+        or
+        (continuous_integration)
+    )

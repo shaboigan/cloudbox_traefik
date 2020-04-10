@@ -1,0 +1,678 @@
+#########################################################################
+# Title:         Cloudbox: Backup Role                                  #
+# Author(s):     l3uddz, desimaniac, RXWatcher1                         #
+# URL:           https://github.com/cloudbox/cloudbox                   #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+- block:
+  - name: Sanity Check
+    import_tasks: "sanity_check.yml"
+
+  - name: Variables
+    import_tasks: "variables.yml"
+    tags:
+      - set-backup
+      - restore-service
+      - cloudbox-restore-service
+
+  - name: Cron
+    import_tasks: "cron.yml"
+    when: ('set-backup' in ansible_run_tags) and not ('backup' in ansible_run_tags)
+    tags: set-backup
+
+  - name: Get Current Time
+    shell: "date \"+%s\""
+    register: start_time_lookup
+
+  - name: "Set 'start_time' variable"
+    set_fact:
+      start_time: "{{ start_time_lookup.stdout }}"
+
+  - name: Snapshot
+    import_tasks: "snapshot.yml"
+
+  - name: "Notify | Cloudbox Backup: Started Cloudbox backup task"
+    include_role:
+      name: notify
+    vars:
+      message: "Cloudbox Backup: Started {{ use_snapshot | ternary('(snapshot-enabled) ','') }}backup task."
+
+  - name: "Create 'backup.lock'."
+    file:
+      path: "{{ playbook_dir }}/backup.lock"
+      state: touch
+      owner: "{{ user.name }}"
+      group: "{{ user.name }}"
+      mode: 0775
+
+  - name: Check if previous backup exists locally
+    find:
+      paths: "{{ local.destination }}"
+      file_type: file
+      patterns: '*.tar'
+      recurse: yes
+    register: dir_files
+
+  # Remove backup.old folder if it exists.
+  - name: "Remove '{{ local.destination }}.old'"
+    file:
+      path: "{{ local.destination }}.old"
+      state: absent
+
+  # Use mv because Ansible copy & delete takes a lot longer.
+  - name: "Moving '{{ local.destination }}' to '{{ local.destination }}.old'"
+    shell: "mv '{{ local.destination }}' '{{ local.destination }}.old'"
+    become: yes
+    become_user: "{{ user.name }}"
+    when: dir_files.matched|int != 0
+
+  - name: "Create backup folders."
+    file: "path={{ item }} state=directory mode=0775 owner={{ user.name }} group={{ user.name }} recurse=yes"
+    with_items:
+      - "/home/{{ user.name }}/logs"
+      - "/home/{{ user.name }}/logs/backup"
+      - "{{ local.destination }}"
+      - "{{ local.destination }}/opt"
+      - "/opt/systemd-backup"
+      - "/opt/crontab-backup"
+
+  # Backup config files
+  - name: "Copy files to '{{ local.destination }}'"
+    copy:
+      src: "{{ item }}"
+      dest: "{{ local.destination }}"
+      owner: "{{ user.name }}"
+      group: "{{ user.name }}"
+      mode: 0775
+      decrypt: no
+      force: yes
+    with_items:
+     - "{{ playbook_dir }}/ansible.cfg"
+     - "{{ playbook_dir }}/accounts.yml"
+     - "{{ playbook_dir }}/settings.yml"
+     - "{{ playbook_dir }}/adv_settings.yml"
+     - "{{ playbook_dir }}/backup_config.yml"
+     - "/home/{{ user.name }}/.config/rclone/rclone.conf"
+    ignore_errors: yes
+
+  # Backup the excludes list if it exists
+  - name: "Look for 'backup_excludes_list.txt' file in cloudbox folder"
+    stat:
+      path: "{{ playbook_dir }}/backup_excludes_list.txt"
+    register: backup_excludes_list
+
+  - name: "Copy files to '{{ local.destination }}'."
+    copy:
+      src: "{{ playbook_dir }}/backup_excludes_list.txt"
+      dest: "{{ local.destination }}"
+      owner: "{{ user.name }}"
+      group: "{{ user.name }}"
+      mode: 0775
+      force: yes
+    when: (backup_excludes_list.stat.exists)
+
+  - name: Set 'backup_excludes_list_path' variable
+    set_fact:
+      backup_excludes_list_path: "{{
+        (playbook_dir + '/backup_excludes_list.txt')
+        if ((backup_excludes_list is defined) and (backup_excludes_list.stat.exists))
+        else (playbook_dir + '/roles/backup/files/backup_excludes_list.txt') }}"
+
+  - name: Cloudbox Restore Service
+    import_tasks: "restore_service.yml"
+    when: restore_service_enabled
+    tags:
+      - restore-service
+      - cloudbox-restore-service
+
+  - name: "Synchronize '/etc/systemd/system' to '/opt/systemd-backup' for inclusion in backup"
+    shell: |
+      /usr/bin/rsync \
+        --delay-updates \
+        -F \
+        --compress \
+        --archive \
+        --no-recursive \
+        --no-links \
+        --no-perms \
+        --include='*.service' \
+        --include='*.mount' \
+        /etc/systemd/system/* /opt/systemd-backup/
+    args:
+      executable: /bin/bash
+      warn: no
+    ignore_errors: yes
+
+  - name: "Copying crontabs to '/opt/crontab-backup' for inclusion in backup"
+    shell: "cp -f /var/spool/cron/crontabs/* /opt/crontab-backup"
+    ignore_errors: yes
+
+  - name: "Reset permissions of folders"
+    file: "path={{ item }} state=directory mode=0775 owner={{ user.name }} group={{ user.name }} recurse=yes"
+    with_items:
+      - "/opt/systemd-backup"
+      - "/opt/crontab-backup"
+
+  # Stop Containers
+
+  - name: "Gather list of running Docker containers"
+    shell: "docker ps --format '{{ '{{' }} .Names{{ '}}' }}' --filter label=com.github.cloudbox.cloudbox_managed=true | xargs echo -n"
+    register: docker_containers
+    ignore_errors: yes
+
+  - name: Set 'docker_containers' variable
+    set_fact:
+      docker_containers: "{{ docker_containers.stdout if (docker_containers is success) else '' }}"
+
+  - name: Docker container tasks
+    block:
+
+    - name: Convert Docker containers string into a list
+      set_fact:
+        docker_containers: "{{ (docker_containers).split() | sort }}"
+
+    - name: Create lists of ignored apps
+      set_fact:
+        torrent_apps:
+          - deluge
+
+    - name: Filter out ignored apps from Docker containers list
+      set_fact:
+        docker_containers: "{{ docker_containers | difference(reverse_proxy_apps+torrent_apps) }}"
+
+    - name: Convert Docker containers list back to string
+      set_fact:
+        docker_containers: "{{ docker_containers | join(' ') }}"
+
+    - name: "Stop all running Docker containers"
+      shell: "docker stop {{ docker_containers }}"
+      ignore_errors: yes
+
+    - name: "Notify | Cloudbox Backup: Stopped Docker containers"
+      include_role:
+        name: notify
+      vars:
+        message: "Cloudbox Backup: Stopped Docker containers."
+
+    when: (docker_containers | trim | length > 0)
+
+  # Services
+
+  - name: Populate Service Facts
+    service_facts:
+
+  # Stop Plexdrive 4
+
+  - name: Check if 'plexdrive4.service' exists
+    stat:
+      path: "/etc/systemd/system/plexdrive4.service"
+    register: plexdrive4_service
+
+  - name: Stop 'plexdrive4' service block
+    block:
+
+    - name: Get 'plexdrive4' service state
+      set_fact:
+        plexdrive4_service_running: "{{ (services['plexdrive4.service'] is defined) and (services['plexdrive4.service']['state'] == 'running') }}"
+
+    - name: Stop 'plexdrive4' service
+      systemd:
+        name: plexdrive4
+        state: stopped
+      when: (plexdrive4_service_running)
+
+    when: (plexdrive4_service is defined) and (plexdrive4_service.stat.exists)
+
+  # Stop Plexdrive 5
+
+  - name: Check if 'plexdrive5.service' exists
+    stat:
+      path: "/etc/systemd/system/plexdrive5.service"
+    register: plexdrive5_service
+
+  - name: Stop 'plexdrive5' service block
+    block:
+
+    - name: Get 'plexdrive5' service state
+      set_fact:
+        plexdrive5_service_running: "{{ (services['plexdrive5.service'] is defined) and (services['plexdrive5.service']['state'] == 'running') }}"
+
+    - name: Stop 'plexdrive5' service
+      systemd:
+        name: plexdrive5
+        state: stopped
+      when: (plexdrive5_service_running)
+
+    when: (plexdrive5_service is defined) and (plexdrive5_service.stat.exists)
+
+  # Stop Cloudplow
+
+  - name: Check if 'cloudplow.service' exists
+    stat:
+      path: "/etc/systemd/system/cloudplow.service"
+    register: cloudplow_service
+
+  - name: Stop 'cloudplow' service block
+    block:
+
+    - name: Get 'cloudplow' service state
+      set_fact:
+        cloudplow_service_running: "{{ (services['cloudplow.service'] is defined) and (services['cloudplow.service']['state'] == 'running') }}"
+
+    - name: Stop 'cloudplow' service
+      systemd:
+        name: cloudplow
+        state: stopped
+      when: (cloudplow_service_running)
+
+    when: (cloudplow_service is defined) and (cloudplow_service.stat.exists)
+
+  # Create snapshot
+
+  - name: Create Snapshot
+    block:
+
+    - name: "Snapshot | Wait for 5 seconds before creating snapshot"
+      wait_for:
+        timeout: 5
+
+    - name: Snapshot | Display snapshot source and destination
+      debug:
+        msg: "Creating snapshot of '{{ backup_snapshot_source_path}}' at '{{ backup_snapshot_destination_path }}' ..."
+
+    - name: Snapshot | Create BTRFS snapshot
+      shell: 'btrfs subvolume snapshot {{ backup_snapshot_source_path}} {{ backup_snapshot_destination_path }}'
+      when: (snapshot_type == 'btrfs')
+
+    - name: Snapshot | Display new backup source location in snapshot
+      debug:
+        msg: "Backup will now archive folders from '{{ backup_opt_path }}'"
+
+    when: (use_snapshot)
+
+  # Start Plexdrive and Docker containers when snapshot is enabled
+
+  - name: Snapshot | Start Plexdrive and Docker containers
+    block:
+
+    - name: "Snapshot | Start 'plexdrive4' service"
+      systemd:
+        name: plexdrive4
+        state: started
+      when: (plexdrive4_service is defined) and (plexdrive4_service.stat.exists) and (plexdrive4_service_running)
+
+    - name: "Snapshot | Start 'plexdrive5' service"
+      systemd:
+        name: plexdrive5
+        state: started
+      when: (plexdrive5_service is defined) and (plexdrive5_service.stat.exists) and (plexdrive5_service_running)
+
+    - name: "Snapshot | Wait for 5 seconds before starting Docker containers"
+      wait_for:
+        timeout: 5
+
+    - name: "Snapshot | Start all previously running Docker containers"
+      shell: 'docker start {{ docker_containers }}'
+      ignore_errors: yes
+      when: (docker_containers | trim | length > 0)
+
+    - name: "Snapshot | Notify | Cloudbox Backup: Started Docker containers"
+      include_role:
+        name: notify
+      vars:
+        message: "Cloudbox Backup: Started Docker containers."
+      when: (docker_containers | trim | length > 0)
+
+    when: (use_snapshot)
+
+  - name: "Get list of all folders in '{{ backup_opt_path }}'"
+    find:
+      paths: "{{ backup_opt_path }}"
+      recurse: no
+      file_type: directory
+    register: opt_folders_temp
+
+  - name: Create 'opt_folders' variable
+    set_fact:
+      opt_folders: []
+
+  - name: Add folder list to 'opt_folders' variable
+    set_fact:
+      opt_folders: "{{ opt_folders }} + [ '{{ item.path }}' ]"
+    with_items: "{{ opt_folders_temp.files }}"
+    loop_control:
+      label: "{{ item.path }}"
+
+  - name: "Archiving '{{ backup_opt_path }}' folders into '{{ local.destination }}/'"
+    shell: |
+      tar \
+        --ignore-failed-read \
+        --warning=no-file-changed \
+        --warning=no-file-removed \
+        --exclude='./snapshots' \
+        --exclude-from '{{ backup_excludes_list_path }}' \
+        -cf '{{ local.destination }}/opt/{{ item | basename }}.tar' -C '{{ item | dirname }}' './{{ item | basename }}'
+    args:
+      executable: /bin/bash
+      warn: no
+    with_items: "{{ opt_folders }}"
+    loop_control:
+      label: "'{{ item }}' --> '{{ local.destination }}/opt/{{ item | basename }}.tar'"
+
+  - name: Snapshot | Cleanup Tasks
+    block:
+
+    - name: Snapshot | Check if BTRFS snapshot is mounted
+      stat:
+        path: "{{ backup_snapshot_destination_path }}"
+      register: btrfs_snapshot_mounted
+
+    - name: Snapshot | Delete BTRFS snapshot
+      block:
+
+      - name: Snapshot | Delete existing BTRFS snapshot (1/2)
+        command: "btrfs subvolume delete {{ backup_snapshot_destination_path }}"
+        register: snapshot_deletion
+        ignore_errors: yes
+
+      - name: Snapshot | Delete existing BTRFS snapshot (2/2)
+        file:
+          path: "{{ backup_snapshot_destination_path }}"
+          state: absent
+        ignore_errors: yes
+        when: (snapshot_deletion is failed)
+
+      when: (btrfs_snapshot_mounted.stat.isdir is defined) and (btrfs_snapshot_mounted.stat.isdir)
+
+    when: (use_snapshot) and (snapshot_type == 'btrfs')
+
+  - name: Check if tarball files were created
+    find:
+      paths: "{{ local.destination }}/opt/"
+      file_type: file
+      patterns: '*.tar'
+    register: dir_files2
+
+  - name: Abort backup when the creation of tarball files fails
+    fail:
+      msg: "There must have been an issue during the tarball creation tasks as they are missing in '{{ local.destination }}/opt/'"
+    when: (dir_files2.matched|int == 0)
+
+  - name: "Remove '{{ local.destination }}.old'"
+    file:
+      path: "{{ local.destination }}.old"
+      state: absent
+    become: yes
+    become_user: "{{ user.name }}"
+    when: (dir_files2.matched|int != 0)
+
+  - name: "Get size of '{{ local.destination }}'"
+    shell: du -s -B1 --apparent-size {{ local.destination }} | awk '{print $1}'
+    register: backup_new
+
+  - name: "Set backup_size"
+    set_fact:
+      backup_size: "{{ (backup_new.stdout|int) | filesizeformat }}"
+
+  - name: "Notify | Cloudbox Backup: Backup created with total size of {{ backup_size }}."
+    include_role:
+      name: notify
+    vars:
+      message: "Cloudbox Backup: Backup created with total size of {{ backup_size }}."
+    ignore_errors: yes
+
+  # Start Plexdrive and Docker containers when snapshot is not enabled
+
+  - name: Start Plexdrive and Docker Containers
+    block:
+
+    - name: "Start 'plexdrive4' service"
+      systemd:
+        name: plexdrive4
+        state: started
+      when: (plexdrive4_service is defined) and (plexdrive4_service.stat.exists) and (plexdrive4_service_running)
+
+    - name: "Start 'plexdrive5' service"
+      systemd:
+        name: plexdrive5
+        state: started
+      when: (plexdrive5_service is defined) and (plexdrive5_service.stat.exists) and (plexdrive5_service_running)
+
+    - name: "Wait for 5 seconds before starting Docker containers"
+      wait_for:
+        timeout: 5
+
+    - name: "Start all previously running Docker containers"
+      shell: 'docker start {{ docker_containers }}'
+      ignore_errors: yes
+      when: (docker_containers | trim | length > 0)
+
+    - name: "Notify | Cloudbox Backup: Started Docker containers"
+      include_role:
+        name: notify
+      vars:
+        message: "Cloudbox Backup: Started Docker containers."
+      when: (docker_containers | trim | length > 0)
+
+    when: (not use_snapshot)
+
+  - name: "Wait for 10 seconds before uploads"
+    wait_for:
+      timeout: 10
+
+  - name: "Reset folder ownership of '{{ local.destination }}/'"
+    shell: "chown -R {{ user.name }}:{{ user.name }} {{ local.destination }}/"
+    args:
+      warn: no
+
+  # Reset mod dates to avoid conflicts during rclone backup. Ansible module doesn't touch folder contents via wildcard.
+  - name: "Reset permissions and mod dates to files in '{{ local.destination }}/'"
+    shell: find '{{ local.destination }}' -type f  -exec touch {} +
+    become: yes
+    become_user: "{{ user.name }}"
+    args:
+      executable: /bin/bash
+      warn: no
+
+  # Due to a touch command in a previous backup, all files on rclone.destination have same mod dates, therefore, only one file's mod date is needed.
+  - name: "Get datestamp for previous '{{ rclone.destination }}/settings.yml'"
+    shell: |
+      /usr/bin/rclone lsl \
+        {{ rclone.destination }}/settings.yml \
+        --user-agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.131 Safari/537.36' \
+        | sed -e 's/^[ \t]*//' | cut -d ' ' -f 2,3 | cut -d '.' -f 1 | sed s/' '/_/g | sed s/':'/./g
+    become: yes
+    become_user: "{{ user.name }}"
+    register: rclone_timestamp
+    ignore_errors: yes
+    when: (rclone.enable)
+
+  # If rclone_timestamp is blank (would happen if settings.yml was not at destination), default the naming of files to '/archived/old/filename.ext', else /archived/date/filename.ext.
+  - name: "Archive previous files in '{{ rclone.destination }}'"
+    shell: |
+      /usr/bin/rclone moveto \
+        --user-agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.131 Safari/537.36' \
+        '{{ rclone.destination }}/{{ item }}' '{{ rclone.destination }}/archived/{{ (rclone_timestamp.stdout) if (rclone_timestamp is defined) else 'old' }}/{{ item }}' \
+        2>/dev/null
+    become: yes
+    become_user: "{{ user.name }}"
+    register: rclone_move
+    failed_when: rclone_move.rc > 3
+    ignore_errors: yes
+    when: (rclone.enable)
+    with_items:
+     - "opt"
+     - "ansible.cfg"
+     - "accounts.yml"
+     - "settings.yml"
+     - "adv_settings.yml"
+     - "backup_config.yml"
+     - "rclone.conf"
+     - "backup_excludes.txt"
+     - "backup_excludes_list.txt"
+
+  - name: "Wait for 5 seconds before uploading"
+    wait_for:
+      timeout: 5
+
+  - name: "Use rclone to upload backup to '{{ rclone.destination }}'"
+    shell: |
+      /usr/bin/rclone copy \
+        --user-agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.131 Safari/537.36' \
+        --transfers=4 \
+        --drive-chunk-size=128M \
+        --stats=30s \
+        -vv \
+        --log-file='/home/{{ user.name }}/logs/backup/cloudbox_backup_rclone.log' \
+        '{{ local.destination }}' '{{ rclone.destination }}'
+    become: yes
+    become_user: "{{ user.name }}"
+    when: (rclone.enable)
+
+  - name: "Notify | Cloudbox Backup: Rclone uploaded backup to '{{ rclone.destination }}'"
+    include_role:
+      name: notify
+    vars:
+      message: "Cloudbox Backup: Rclone uploaded backup to '{{ rclone.destination }}'."
+    when: (rclone.enable)
+
+  - name: "Use rsync to upload backup to '{{ rsync.destination }}'"
+    synchronize:
+      src: "{{ local.destination }}/"
+      dest: "{{ rsync.destination }}/"
+      set_remote_user: yes
+      compress: no
+    become: yes
+    become_user: "{{ user.name }}"
+    when: (rsync.enable)
+
+  - name: "Notify | Cloudbox Backup: Rsync uploaded backup to '{{ rsync.destination }}'"
+    include_role:
+      name: notify
+    vars:
+      message: "Cloudbox Backup: Rsync uploaded backup to '{{ rsync.destination }}'."
+    when: (rsync.enable)
+
+  - name: Get Current Time
+    shell: "date \"+%s\""
+    register: end_time_lookup
+
+  - name: "Set 'end_time' variable"
+    set_fact:
+      end_time: "{{ end_time_lookup.stdout }}"
+
+  - name: "Calculate Total Time"
+    set_fact:
+      total_time: "{{ (((end_time|int) - (start_time|int)) / 60) | int | abs }}"
+
+  - name: "Notify | Cloudbox Backup: Finished Cloudbox backup task in {{ total_time }} minutes"
+    include_role:
+      name: notify
+    vars:
+      message: "Cloudbox Backup: Finished Cloudbox {{ use_snapshot | ternary('(snapshot-enabled) ','') }}backup task in {{ total_time }} minutes."
+
+  - name: "Start 'cloudplow' service"
+    systemd:
+      name: cloudplow
+      state: started
+    when: (cloudplow_service is defined) and (cloudplow_service.stat.exists) and (cloudplow_service_running)
+
+  - name: "Remove {{ local.destination }}"
+    file:
+      path: "{{ local.destination }}"
+      state: absent
+    when: (dir_files2.matched|int != 0) and (not local.enable)
+
+  - name: Backup Status - Success
+    debug:
+      msg: "Backup Completed Successfully."
+
+  rescue:
+  - name: Snapshot | Cleanup Tasks
+    block:
+
+    - name: Snapshot | Check if BTRFS snapshot is mounted
+      stat:
+        path: "{{ backup_snapshot_destination_path }}"
+      register: btrfs_snapshot_mounted
+
+    - name: Snapshot | Delete BTRFS snapshot
+      block:
+
+      - name: Snapshot | Delete existing BTRFS snapshot (1/2)
+        command: "btrfs subvolume delete {{ backup_snapshot_destination_path }}"
+        register: snapshot_deletion
+        ignore_errors: yes
+
+      - name: Snapshot | Delete existing BTRFS snapshot (2/2)
+        file:
+          path: "{{ backup_snapshot_destination_path }}"
+          state: absent
+        ignore_errors: yes
+        when: (snapshot_deletion is failed)
+
+      when: (btrfs_snapshot_mounted.stat.isdir is defined) and (btrfs_snapshot_mounted.stat.isdir)
+
+    when: (use_snapshot) and (snapshot_type == 'btrfs')
+
+  - name: "Reset folder ownership of '{{ local.destination }}/'"
+    shell: "chown -R {{ user.name }}:{{ user.name }} {{ local.destination }}/"
+    args:
+      warn: no
+
+  - name: Start Plexdrive and Docker Containers
+    block:
+
+    - name: "Start 'plexdrive4' service"
+      systemd:
+        name: plexdrive4
+        state: started
+      when: (plexdrive4_service is defined) and (plexdrive4_service.stat.exists) and (plexdrive4_service_running)
+
+    - name: "Start 'plexdrive5' service"
+      systemd:
+        name: plexdrive5
+        state: started
+      when: (plexdrive5_service is defined) and (plexdrive5_service.stat.exists) and (plexdrive5_service_running)
+
+    - name: "Wait for 5 seconds before starting Docker containers"
+      wait_for:
+        timeout: 5
+
+    - name: "Start all previously running Docker containers"
+      shell: 'docker start {{ docker_containers }}'
+      ignore_errors: yes
+      when: (docker_containers | trim | length > 0)
+
+    when: (not use_snapshot)
+
+  - name: "Start 'cloudplow' service"
+    systemd:
+      name: cloudplow
+      state: started
+    when: (cloudplow_service is defined) and (cloudplow_service.stat.exists) and (cloudplow_service_running)
+
+  - name: Backup Status - Failure
+    debug:
+      msg: 'Backup terminated due to an error'
+
+  - name: "Notify | Cloudbox Backup: Backup terminated due to an error"
+    include_role:
+      name: notify
+    vars:
+      message: "Cloudbox Backup: Backup terminated due to an error."
+
+  always:
+  - name: "Remove 'backup.lock'"
+    file:
+      path: "{{ playbook_dir }}/backup.lock"
+      state: absent
+
+  - name: "Reset logs folder ownership."
+    shell: "chown -R {{ user.name }}:{{ user.name }} '/home/{{ user.name }}/logs/'"
+    args:
+      warn: no

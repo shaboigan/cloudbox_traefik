@@ -1,0 +1,86 @@
+#########################################################################
+# Title:            Cloudbox: radarrpq Role                             #
+# Author(s):        l3uddz, desimaniac                                  #
+# URL:              https://github.com/cloudbox/cloudbox                #
+# Docker Image(s):  hotio/radarrpq,                                     #
+#                   andrewkhunn/suitarr_mp4_automator                   #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+- name: "Set DNS Record on CloudFlare"
+  include_role:
+    name: cloudflare-dns
+  vars:
+    subdomain: radarrpq
+  when: cloudflare_enabled
+
+- name: Slurp hashed htpasswd
+  slurp:
+    src: "/opt/traefik_v2/.htpasswd"
+  register: hashed
+
+- name: Set hashed password
+  set_fact:
+    htpasswd: "{{ hashed['content'] | b64decode }}"
+
+- name: Stop and remove any existing container
+  docker_container:
+    name: radarrpq
+    state: absent
+
+- name: Create radarrpq directories
+  file: "path={{ item }} state=directory mode=0775 owner={{ user.name }} group={{ user.name }}"
+  with_items:
+    - /opt/radarrpq
+
+- name: "Check if '/dev/dri' exists"
+  stat:
+    path: "/dev/dri"
+  register: dev_dri
+
+- name: Set 'default_volumes' variable
+  set_fact:
+    default_volumes:
+      - "/opt/radarrpq:/config"
+      - "/opt/scripts:/scripts"
+      - "/mnt:/mnt"
+      - "/mnt/unionfs/Media/Movies:/movies"
+
+- name: Create and start container
+  docker_container:
+    name: radarrpq
+    image: "hotio/radarrpq"
+    pull: yes
+    published_ports:
+      - "127.0.0.1:7880:7878"
+    env:
+      BACKUP: "no"
+      PUID: "{{ uid }}"
+      PGID: "{{ gid }}"
+      UMASK: 002
+      TZ: "{{ tz }}"
+    volumes: "{{ default_volumes + nzbs_downloads_path|default([]) + torrents_downloads_path|default([]) }}"
+    devices: "{{ '/dev/dri:/dev/dri' if (gpu.intel and dev_dri.stat.exists) | default(false) else omit }}"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.radarrpq.entrypoints: "http"
+      traefik.http.routers.radarrpq.rule: "Host:radarrpq.{{ user.domain }}"
+      traefik.http.routers.radarrpq.middlewares: "https-redirect@file"
+      traefik.http.routers.radarrpq-secure.entrypoints: "https"
+      traefik.http.routers.radarrpq-secure.rule: "Host:radarrpq.{{ user.domain }}"
+      traefik.http.routers.radarrpq-secure.tls: "true"
+      traefik.http.routers.radarrpq-secure.tls.certresolver: "http"
+      traefik.http.routers.radarrpq-secure.service: "radarrpq"
+      traefik.http.services.radarrpq.loadbalancer.server.port: "7878"
+      traefik.docker.network: "cloudbox"
+      "com.github.cloudbox.cloudbox_managed": "true"
+    networks:
+      - name: cloudbox
+        aliases:
+          - radarrpq
+    purge_networks: yes
+    restart_policy: unless-stopped
+    state: started

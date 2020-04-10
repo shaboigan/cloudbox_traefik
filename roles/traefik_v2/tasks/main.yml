@@ -1,0 +1,121 @@
+#########################################################################
+# Title:         Cloudbox: traefik 2.0 Role                             #
+# Author(s):     shaboigan                                              #
+# URL:                                                                  #
+# Docker Image:  traefik:v2.0                                           #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+- name: "Setting CloudFlare DNS Record"
+  include_role:
+    name: cloudflare
+  vars:
+    subdomain: "{{ traefik.subdomain|default('traefik_v2',true) }}"
+  when: cloudflare_enabled
+
+- name: Create traefik_v2 directories
+  file: "path={{ item }} state=directory mode=0775 owner={{ user.name }} group={{ user.name }}"
+  with_items:
+    - /opt/traefik_v2
+
+- name: Check traefik.yml exists
+  stat:
+    path: "/opt/traefik_v2/traefik.yml"
+  register: traefik_yml
+
+- name: Import traefik.yml
+  template:
+    src: traefik.yml
+    dest: "/opt/traefik_v2/traefik.yml"
+    mode: 0775
+    owner: "{{ user.name }}"
+    group: "{{ user.name }}"
+    force: yes
+  when: traefik_yml.stat.exists == False
+
+- name: Check config.yml exists
+  stat:
+    path: "/opt/traefik_v2/config.yml"
+  register: config_yml
+
+- name: Import config.yml
+  template:
+    src: config.yml
+    dest: "/opt/traefik_v2/config.yml"
+    mode: 0775
+    owner: "{{ user.name }}"
+    group: "{{ user.name }}"
+    force: yes
+  when: config_yml.stat.exists == False
+
+- name: Check acme.json exists
+  stat:
+    path: "/opt/traefik_v2/acme.json"
+  register: acme_json
+
+- name: Create blank acme.json
+  file: "path={{ item }} state=touch mode=0600 owner={{ user.name }} group={{ user.name }}"
+  with_items: "/opt/traefik_v2/acme.json"
+  when: acme_json.stat.exists == False
+
+- name: Check .htpasswd exists
+  stat:
+    path: "/opt/traefik_v2/.htpasswd"
+  register: htpasswd
+
+- name: Create htpasswd
+  htpasswd:
+    path: "/opt/traefik_v2/.htpasswd"
+    name: "{{ htpasswd.user }}"
+    password: "{{ htpasswd.pass }}"
+    owner: "{{ user.name }}"
+    group: "{{ user.name }}"
+    mode: 0664
+  when: htpasswd.stat.exists == False
+
+- name: Stop and remove any existing container
+  docker_container:
+    name: traefik_v2
+    state: absent
+
+- name: Create and start container
+  docker_container:
+    name: traefik_v2
+    image: traefik:v2.0
+    pull: yes
+    published_ports:
+      - "80:80"
+      - "443:443"
+      - "9876:8080"
+    env:
+      PUID: "{{ uid }}"
+      PGID: "{{ gid }}"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /opt/traefik_v2/traefik.yml:/traefik.yml:ro
+      - /opt/traefik_v2/acme.json:/acme.json
+      - /opt/traefik_v2/config.yml:/config.yml:ro
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.traefik_v2.entrypoints: "http"
+      traefik.http.routers.traefik_v2.rule: "Host('traefik.{{ user.domain }}')"
+      #traefik.http.middlewares.traefik_v2-auth.basicauth.users: "{{ htpasswd }}"
+      traefik.http.middlewares.traefik_v2-https-redirect.redirectscheme.scheme: "https"
+      traefik.http.routers.traefik_v2.middlewares: "traefik-https-redirect"
+      traefik.http.routers.traefik_v2-secure.entrypoints: "https"
+      traefik.http.routers.traefik_v2-secure.rule: "Host('traefik.{{ user.domain }}')"
+      traefik.http.routers.traefik_v2-secure.middlewares: "traefik-auth"
+      traefik.http.routers.traefik_v2-secure.tls: "true"
+      traefik.http.routers.traefik_v2-secure.tls.certresolver: "http"
+      traefik.http.routers.traefik_v2-secure.service: "traefik_v2"
+    networks:
+      - name: cloudbox
+        aliases:
+          - traefik_v2
+    purge_networks: yes
+    restart_policy: always
+    state: started

@@ -1,0 +1,43 @@
+#########################################################################
+# Title:         Cloudbox: ctop Role                                    #
+# Author(s):     l3uddz, desimaniac                                     #
+# URL:           https://github.com/cloudbox/cloudbox                   #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+- name: Get latest ctop URL
+  shell: curl -s https://api.github.com/repos/bcicen/ctop/releases/latest | jq -r ".assets[] | select(.name | test(\"linux-amd64\")) | .browser_download_url"
+  args:
+    executable: /bin/bash
+  register: ctop_download_url
+  ignore_errors: yes
+
+- name: Install ctop
+  get_url:
+    url:  "{{ ctop_download_url.stdout | default('https://github.com/bcicen/ctop/releases/download/v0.7.1/ctop-0.7.1-linux-amd64',true) }}"
+    dest: /usr/local/bin/ctop
+    mode: 0775
+    owner: root
+    group: root
+    force: yes
+    validate_certs: no
+  ignore_errors: yes
+  register: x
+
+- name: "Get ctop version"
+  shell: "/usr/local/bin/ctop -v | head -n 1 | awk '{ print $3 }' | sed 's/,$//'"
+  register: ctop_version
+  ignore_errors: yes
+  when: x is success
+
+- name: "Display ctop version"
+  debug:
+    msg: "ctop {{ ctop_version.stdout }} installed."
+  when: x is success
+
+- debug:
+    msg: "ctop install failed."
+  when: x is not success

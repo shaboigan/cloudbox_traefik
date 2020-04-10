@@ -1,0 +1,58 @@
+#########################################################################
+# Title:         Cloudbox: Plex Patrol Role                             #
+# Author(s):     l3uddz                                                 #
+# URL:           https://github.com/cloudbox/cloudbox                   #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+- name: Stop and remove any existing container
+  docker_container:
+    name: plex_patrol
+    state: absent
+
+- name: Create plex_patrol directories
+  file: "path={{ item }} state=directory mode=0775 owner={{ user.name }} group={{ user.name }}"
+  with_items:
+    - /opt/plex_patrol
+
+- name: Check config exists
+  stat:
+    path: "/opt/plex_patrol/settings.ini"
+  register: plex_patrol_config
+
+- name: Import Plex Auth Token role
+  import_role:
+    name: plex_auth_token
+  when: plex_account_enabled and not plex_patrol_config.stat.exists
+
+- name: Import default config
+  template:
+    src: settings.ini.j2
+    dest: /opt/plex_patrol/settings.ini
+    owner: "{{ user.name }}"
+    group: "{{ user.name }}"
+    mode: 0775
+    force: yes
+  when: not plex_patrol_config.stat.exists
+
+- name: Create and start container
+  docker_container:
+    name: plex_patrol
+    image: "cloudb0x/plex_patrol:latest"
+    pull: yes
+    user: "{{ uid }}:{{ gid }}"
+    volumes:
+      - "/etc/localtime:/etc/localtime:ro"
+      - "/opt/plex_patrol:/config"
+    labels:
+      "com.github.cloudbox.cloudbox_managed": "true"
+    networks:
+      - name: cloudbox
+        aliases:
+          - plex_patrol
+    purge_networks: yes
+    restart_policy: unless-stopped
+    state: started

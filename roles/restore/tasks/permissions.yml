@@ -1,0 +1,19 @@
+#########################################################################
+# Title:         Restore: Set '/opt' Ownership and Permissions Task     #
+# Author(s):     desimaniac, l3uddz                                     #
+# URL:           https://github.com/cloudbox/cloudbox                   #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+- name: Set '/opt' ownership recursively
+  shell: "chown -R {{ user.name }}:{{ user.name }} /opt"
+  args:
+    warn: no
+
+- name: Set '/opt' permissions recursively
+  shell: "chmod -R ugo+X /opt"
+  args:
+    warn: no

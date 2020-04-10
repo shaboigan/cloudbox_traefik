@@ -1,0 +1,49 @@
+#########################################################################
+# Title:         Cloudbox: Remote Role                                  #
+# Author(s):     desimaniac                                             #
+# URL:           https://github.com/cloudbox/cloudbox                   #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+# Sanity Check
+
+- name: Sanity Check Tasks
+  import_tasks: "subtasks/sanity_checks.yml"
+
+# Variables
+
+- name: Variables Task
+  import_tasks: "subtasks/variables.yml"
+
+# Stop Containers
+
+- name: Container Tasks
+  import_tasks: "subtasks/containers.yml"
+  when: ('mounts' in ansible_run_tags) or ('mounts_override' in ansible_run_tags)
+
+# Existing Setup
+
+- name: Legacy Tasks
+  import_tasks: "subtasks/legacy.yml"
+
+- name: Service Tasks
+  include_tasks: "subtasks/services.yml"
+  loop_control:
+    loop_var: outer_item
+  loop: "{{ service_files }}"
+
+- name: Mount Path Tasks
+  import_tasks: "subtasks/mount_path.yml"
+
+# New Setup
+
+- name: Basic Tasks
+  import_tasks: "subtasks/basics.yml"
+
+# Mount Remote
+
+- name: Mount Remote Tasks
+  include_tasks: "subtasks/mounts/{{ remote_mount_type }}.yml"

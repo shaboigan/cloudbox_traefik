@@ -1,0 +1,47 @@
+#########################################################################
+# Title:         Cloudbox: Remote | Mount Path Tasks                    #
+# Author(s):     desimaniac                                             #
+# URL:           https://github.com/cloudbox/cloudbox                   #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+# /mnt/remote
+
+- name: "Mount Path | Force unmount '/mnt/remote'"
+  shell: "/bin/umount -f '/mnt/remote' 2>/dev/null || :"
+  ignore_errors: yes
+
+- name: "Mount Path | Check if '/mnt/remote' exists"
+  stat:
+    path: "/mnt/remote"
+  register: mnt_remote
+  ignore_errors: yes
+
+- name: "Mount Path | Tasks for '/mnt/remote' path"
+  block:
+
+  - name: "Mount Path | Remove empty directories in '/mnt/remote'"
+    shell: "find '/mnt/remote' -type d -empty -delete"
+    ignore_errors: yes
+
+  - name: "Mount Path | Recursively find '/mnt/remote' files"
+    find:
+      paths: '/mnt/remote'
+      hidden: yes
+      recurse: yes
+    register: mnt_remote_files
+
+  - name: "Mount Path | Backup non-empty '/mnt/remote' path"
+    shell: "mv /mnt/remote /mnt/remote_{{ '%Y-%m-%d_%H.%M.%S' | strftime(ansible_date_time['epoch']|int) }}"
+    ignore_errors: yes
+    when: (mnt_remote_files.matched|int > 0)
+
+  - name: "Mount Path | Remove '/mnt/remote'"
+    file:
+      path: "/mnt/remote"
+      state: absent
+
+  when: (mnt_remote is failed) or (mnt_remote.stat.exists)

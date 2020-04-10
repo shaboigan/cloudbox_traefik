@@ -1,0 +1,79 @@
+#########################################################################
+# Title:         Cloudbox: Lidarr Role                                  #
+# Author(s):     l3uddz, desimaniac                                     #
+# URL:           https://github.com/cloudbox/cloudbox                   #
+# Docker Image:  hotio/lidarr                                           #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+- name: "Set DNS Record on CloudFlare"
+  include_role:
+    name: cloudflare-dns
+  vars:
+    subdomain: lidarr
+  when: cloudflare_enabled
+
+- name: Slurp hashed htpasswd
+  slurp:
+    src: "/opt/traefik_v2/.htpasswd"
+  register: hashed
+
+- name: Set hashed password
+  set_fact:
+    htpasswd: "{{ hashed['content'] | b64decode }}"
+
+- name: Stop and remove any existing container
+  docker_container:
+    name: lidarr
+    state: absent
+
+- name: Create lidarr directories
+  file: "path={{ item }} state=directory mode=0775 owner={{ user.name }} group={{ user.name }}"
+  with_items:
+    - /opt/lidarr
+
+- name: Set default_volumes variable
+  set_fact:
+    default_volumes:
+      - "/opt/lidarr:/config"
+      - "/opt/scripts:/scripts"
+      - "/mnt:/mnt"
+      - "/mnt/unionfs/Media/Music:/music"
+
+- name: Create and start container
+  docker_container:
+    name: lidarr
+    image: hotio/lidarr
+    pull: yes
+    published_ports:
+      - "127.0.0.1:8686:8686"
+    env:
+      BACKUP: "no"
+      PUID: "{{ uid }}"
+      PGID: "{{ gid }}"
+      UMASK: 002
+      TZ: "{{ tz }}"
+    volumes: "{{ default_volumes + nzbs_downloads_path|default([]) + torrents_downloads_path|default([]) }}"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.lidarr.entrypoints: "http"
+      traefik.http.routers.lidarr.rule: "Host:lidarr.{{ user.domain }}"
+      traefik.http.routers.lidarr.middlewares: "https-redirect@file"
+      traefik.http.routers.lidarr-secure.entrypoints: "https"
+      traefik.http.routers.lidarr-secure.rule: "Host:lidarr.{{ user.domain }}"
+      traefik.http.routers.lidarr-secure.tls: "true"
+      traefik.http.routers.lidarr-secure.tls.certresolver: "http"
+      traefik.http.routers.lidarr-secure.service: "lidarr"
+      traefik.http.services.lidarr.loadbalancer.server.port: "8686"
+      traefik.docker.network: "cloudbox"
+      "com.github.cloudbox.cloudbox_managed": "true"
+    networks:
+      - name: cloudbox
+        aliases:
+          - lidarr
+    purge_networks: yes
+    restart_policy: unless-stopped
+    state: started
