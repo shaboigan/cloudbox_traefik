@@ -12,14 +12,17 @@
         }
     },
     "notifications": {
-    },
-    "nzbget": {
-        "enabled": false,
-        "url": "https://{{ user.name }}:{{ user.pass }}@nzbget.{{ user.domain }}"
+        "Slack": {
+            "webhook_url": "https://hooks.slack.com/services/{{ slack.token }}",
+        "sender_name": "cloudplow",
+        "sender_icon": ":heavy_exclamation_mark:",
+        "channel": "",
+            "service": "slack"
+        }
     },
     "plex": {
         "enabled": false,
-        "url": "https://plex.{{ user.domain }}",
+        "url": "https://{{ plex.subdomain|default('plex',true) }}.{{ user.domain }}",
         "token": "{{ plex_auth_token | default('') }}",
         "poll_interval": 60,
         "notifications": false,

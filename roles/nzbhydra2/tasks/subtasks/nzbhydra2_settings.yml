@@ -80,24 +80,26 @@
   with_items:
     - {regexp: '(downloaders:)\s?.*', line: '  \1'}
 
-- name: Add NZBGet downloader
-  lineinfile:
-    path: "/opt/nzbhydra2/app/nzbhydra.yml"
-    insertafter: 'downloaders:'
-    line: "{{ item.line }}"
-    state: present
-  with_items:
-    - {line: '    password: "{{ user.pass }}"'}
-    - {line: '    username: "{{ user.name }}"'}
-    - {line: '    url: "http://nzbget:6789"'}
-    - {line: '    downloaderType: "NZBGET"'}
-    - {line: '    nzbAddingType: "UPLOAD"'}
-    - {line: '    name: "NZBGet"'}
-    - {line: '    iconCssClass: ""'}
-    - {line: '    enabled: true'}
-    - {line: '    downloadType: "NZB"'}
-    - {line: '    defaultCategory: null'}
-    - {line: '  - apiKey: null'}
+#--- Replace with sabnzbd settings
+
+#- name: Add NZBGet downloader
+#  lineinfile:
+#    path: "/opt/nzbhydra2/app/nzbhydra.yml"
+#    insertafter: 'downloaders:'
+#    line: "{{ item.line }}"
+#    state: present
+#  with_items:
+#    - {line: '    password: "{{ user.pass }}"'}
+#    - {line: '    username: "{{ user.name }}"'}
+#    - {line: '    url: "http://nzbget:6789"'}
+#    - {line: '    downloaderType: "NZBGET"'}
+#    - {line: '    nzbAddingType: "UPLOAD"'}
+#    - {line: '    name: "NZBGet"'}
+#    - {line: '    iconCssClass: ""'}
+#    - {line: '    enabled: true'}
+#    - {line: '    downloadType: "NZB"'}
+#    - {line: '    defaultCategory: null'}
+#    - {line: '  - apiKey: null'}
 
 - name: Start container to apply changes
   docker_container:

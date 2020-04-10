@@ -14,9 +14,3 @@
       nzbs: "{{ (downloads.nzbs | default('',true)) | regex_replace('\\/$', '') }}"
       torrents: "{{ downloads.torrents | regex_replace('\\/$', '') }}"
   when: (downloads is defined) and (downloads.nzbs is defined) and (downloads.torrents is defined)
-
-- name: Clean Paths | Remove trailing slash from old downloads paths
-  set_fact:
-    nzbget: { downloads: "{{ (nzbget.downloads | default('',true)) | regex_replace('\\/$', '') }}" }
-    rutorrent: { downloads: "{{ (rutorrent.downloads | default('',true)) | regex_replace('\\/$', '') }}" }
-  when: (nzbget is defined) and (rutorrent is defined)

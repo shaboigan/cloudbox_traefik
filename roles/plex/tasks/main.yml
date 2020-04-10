@@ -12,7 +12,7 @@
   include_role:
     name: cloudflare-dns
   vars:
-    subdomain: "{{ plex.subdomain|default('plex',true) }}"    
+    subdomain: "{{ plex.subdomain|default('plex',true) }}"
   when: cloudflare_enabled
 
 - name: "Create Plex directories"

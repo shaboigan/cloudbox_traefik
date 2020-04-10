@@ -49,13 +49,6 @@
     become: yes
     become_user: "{{ user.name }}"
 
-  - name: Settings | Update NZBGet credentials in 'config.json'
-    shell: |
-      CONFIG_PATH="/opt/cloudplow/config.json"
-      jq '.nzbget.url = "https://{{ user.name }}:{{ user.pass }}@nzbget.{{ user.domain }}"' ${CONFIG_PATH} | sponge ${CONFIG_PATH}
-    become: yes
-    become_user: "{{ user.name }}"
-
   - name: Settings | Update Plex URL in 'config.json'
     shell: |
       CONFIG_PATH="/opt/cloudplow/config.json"
