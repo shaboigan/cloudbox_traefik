@@ -75,7 +75,7 @@
       PUID: "{{ uid }}"
       PGID: "{{ gid }}"
       UMASK: "000"
-      VPN_ENABLED: "{{ vpn.enabled }}"
+      VPN_ENABLED: "{{ vpn.enable }}"
       VPN_PROV: "airvpn"
       ENABLE_PRIVOXY: "no"
       LAN_NETWORK: "172.18.0.0/16"

@@ -27,12 +27,13 @@
 - name: Create script directories
   file: "path={{ item }} state=directory mode=0775 owner={{ user.name }} group={{ user.name }} recurse=yes"
   with_items:
-    - /opt/scripts
+    - /opt/scripts    
     - /opt/scripts/docker
     - /opt/scripts/frontail
     - /opt/scripts/plex
     - /opt/scripts/plex_autoscan
     - /opt/scripts/tautulli
+    - /opt/scripts/torrents    
 
 - name: Import 'arrpush.py'
   get_url:

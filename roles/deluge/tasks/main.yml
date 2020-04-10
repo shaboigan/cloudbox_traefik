@@ -25,8 +25,7 @@
   file: "path={{ item }} state=directory mode=0775 owner={{ user.name }} group={{ user.name }} recurse=yes"
   with_items:
     - /opt/deluge
-    - /opt/deluge/openvpn    
-    - /opt/scripts/deluge
+    - /opt/deluge/openvpn
 
 - name: Create new downloads directories
   file: "path={{ item }} state=directory mode=0775 owner={{ user.name }} group={{ user.name }} recurse=yes"
