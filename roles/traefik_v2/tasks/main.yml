@@ -13,7 +13,7 @@
   include_role:
     name: cloudflare
   vars:
-    subdomain: "{{ traefik.subdomain|default('traefik_v2',true) }}"
+    subdomain: "{{ traefik.subdomain|default('traefik',true) }}"
   when: cloudflare_enabled
 
 - name: Create traefik_v2 directories
@@ -102,12 +102,12 @@
     labels:
       traefik.enable: "true"
       traefik.http.routers.traefik_v2.entrypoints: "http"
-      traefik.http.routers.traefik_v2.rule: "Host('traefik.{{ user.domain }}')"
+      traefik.http.routers.traefik_v2.rule: "Host:{{ traefik.subdomain|default('traefik',true) }}.{{ user.domain }}')"
       #traefik.http.middlewares.traefik_v2-auth.basicauth.users: "{{ htpasswd }}"
       traefik.http.middlewares.traefik_v2-https-redirect.redirectscheme.scheme: "https"
       traefik.http.routers.traefik_v2.middlewares: "traefik-https-redirect"
       traefik.http.routers.traefik_v2-secure.entrypoints: "https"
-      traefik.http.routers.traefik_v2-secure.rule: "Host('traefik.{{ user.domain }}')"
+      traefik.http.routers.traefik_v2-secure.rule: "Host:{{ traefik.subdomain|default('traefik',true) }}.{{ user.domain }}')"
       traefik.http.routers.traefik_v2-secure.middlewares: "traefik-auth"
       traefik.http.routers.traefik_v2-secure.tls: "true"
       traefik.http.routers.traefik_v2-secure.tls.certresolver: "http"

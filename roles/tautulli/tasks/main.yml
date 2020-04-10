@@ -13,7 +13,7 @@
   include_role:
     name: cloudflare-dns
   vars:
-    subdomain: tautulli
+    subdomain: "{{ tautulli.subdomain|default('tautulli',true) }}"
   when: cloudflare_enabled
 
 - name: Stop and remove any existing container
@@ -51,10 +51,10 @@
     labels:
       traefik.enable: "true"
       traefik.http.routers.tautulli.entrypoints: "http"
-      traefik.http.routers.tautulli.rule: "Host:tautulli.{{ user.domain }}"
+      traefik.http.routers.tautulli.rule: "Host:{{ tautulli.subdomain|default('tautulli',true) }}.{{ user.domain }}"
       traefik.http.routers.tautulli.middlewares: "https-redirect@file"
       traefik.http.routers.tautulli-secure.entrypoints: "https"
-      traefik.http.routers.tautulli-secure.rule: "Host:tautulli.{{ user.domain }}"
+      traefik.http.routers.tautulli-secure.rule: "Host:{{ tautulli.subdomain|default('tautulli',true) }}.{{ user.domain }}"
       traefik.http.routers.tautulli-secure.tls: "true"
       traefik.http.routers.tautulli-secure.tls.certresolver: "http"
       traefik.http.routers.tautulli-secure.service: "tautulli"

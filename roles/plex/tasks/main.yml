@@ -12,7 +12,7 @@
   include_role:
     name: cloudflare-dns
   vars:
-    subdomain: "{{ plex_subdomain }}"
+    subdomain: "{{ plex.subdomain|default('plex',true) }}"    
   when: cloudflare_enabled
 
 - name: "Create Plex directories"
@@ -59,10 +59,10 @@
     labels:
       traefik.enable: "true"
       traefik.http.routers.plex.entrypoints: "http"
-      traefik.http.routers.plex.rule: "Host:plex.{{ user.domain }}"
+      traefik.http.routers.plex.rule: "Host:{{ plex.subdomain|default('plex',true) }}.{{ user.domain }}"
       traefik.http.routers.plex.middlewares: "https-redirect@file"
       traefik.http.routers.plex-secure.entrypoints: "https"
-      traefik.http.routers.plex-secure.rule: "Host:plex.{{ user.domain }}"
+      traefik.http.routers.plex-secure.rule: "Host:{{ plex.subdomain|default('plex',true) }}.{{ user.domain }}"
       traefik.http.routers.plex-secure.tls: "true"
       traefik.http.routers.plex-secure.tls.certresolver: "http"
       traefik.http.routers.plex-secure.service: "plex"
