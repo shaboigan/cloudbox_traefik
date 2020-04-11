@@ -45,7 +45,7 @@
     - { role: subliminal, tags: ['subliminal'] }
     - { role: watchtower, tags: ['watchtower'] }
     - { role: traktarr, tags: ['traktarr'] }
-    - { role: traefik_v2, tags: ['traefik_v2'] }    
+    - { role: traefik_v1, tags: ['traefik_v1'] }    
     - { role: plex_dupefinder, tags: ['plex_dupefinder'] }
     - { role: heimdall, tags: ['heimdall'] }
     - { role: netdata, tags: ['netdata'] }
