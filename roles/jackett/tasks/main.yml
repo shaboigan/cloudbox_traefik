@@ -47,6 +47,7 @@
     stat:
       path: "/opt/sabnzbd/openvpn/config.ovpn"
     register: sabnzbd_vpn
+    when: not deluge_vpn.stat.exists
 
   - name: Set sabnzbd as the vpn host container
     set_fact:

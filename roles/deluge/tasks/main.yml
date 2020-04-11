@@ -93,7 +93,7 @@
       traefik.frontend.redirect.entryPoint: "https"
       traefik.frontend.rule: "Host:deluge.{{ user.domain }}"
       traefik.port: "8112"
-      traefik.frontend.auth.basic: "{{ htpasswd }}"
+#      traefik.frontend.auth.basic: "{{ htpasswd }}"
       traefik.docker.network: "cloudbox"
       "com.github.cloudbox.cloudbox_managed": "true"
 #    labels:
