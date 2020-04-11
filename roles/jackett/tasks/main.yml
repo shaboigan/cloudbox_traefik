@@ -66,6 +66,8 @@
     image: hotio/jackett
     pull: yes
     network_mode: "container:{{ vpn_host }}"
+#    published_ports:
+#      - "127.0.0.1:9117:9117"    
     env:
       BACKUP: "no"
       PUID: "{{ uid }}"
@@ -96,10 +98,10 @@
 #      traefik.http.services.jackett.loadbalancer.server.port: "9117"
 #      traefik.docker.network: "cloudbox"
 #      "com.github.cloudbox.cloudbox_managed": "true"
-    networks:
-      - name: cloudbox
-        aliases:
-          - jackett
+#    networks:
+#      - name: cloudbox
+#        aliases:
+#          - jackett
     purge_networks: yes
     restart_policy: unless-stopped
     state: started
