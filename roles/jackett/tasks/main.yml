@@ -44,15 +44,19 @@
     when: deluge_vpn.stat.exists
 
   - name: Check if sabnzbd is using vpn
-    stat:
-      path: "/opt/sabnzbd/openvpn/config.ovpn"
-    register: sabnzbd_vpn
-    when: not deluge_vpn.stat.exists
+    block:
 
-  - name: Set sabnzbd as the vpn host container
-    set_fact:
-      vpn_host: sabnzbd
-    when: sabnzbd_vpn.stat.exists
+    - name: Check if sabnzbd is using vpn
+      stat:
+        path: "/opt/sabnzbd/openvpn/config.ovpn"
+      register: sabnzbd_vpn
+
+    - name: Set sabnzbd as the vpn host container
+      set_fact:
+        vpn_host: sabnzbd
+      when: sabnzbd_vpn.stat.exists
+
+    when: not deluge_vpn.stat.exists      
 
   when: (vpn.enable|default(false,true))
 
