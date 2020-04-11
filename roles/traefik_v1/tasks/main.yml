@@ -1,0 +1,122 @@
+#########################################################################
+# Title:         Cloudbox: Traefik 1.0 Role                             #
+# Author(s):     shaboigan                                              #
+# URL:                                                                  #
+# Docker Image:  traefik:v2.0                                           #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+- name: "Setting CloudFlare DNS Record"
+  include_role:
+    name: cloudflare
+  vars:
+    subdomain: "{{ traefik.subdomain|default('traefik',true) }}"
+
+- name: Create traefik directories
+  file: "path={{ item }} state=directory mode=0775 owner={{ user.name }} group={{ user.name }} recurse=yes"
+  with_items:
+    - /opt/traefik_v1
+    - /opt/traefik_v1/acme
+
+- name: Check traefik.toml exists
+  stat:
+    path: "/opt/traefik_v1/traefik.toml"
+  register: traefik_toml
+
+- name: Import traefik.toml
+  template:
+    src: traefik.toml
+    dest: /opt/traefik_v1/traefik.toml
+    mode: 0775
+    owner: "{{ user.name }}"
+    group: "{{ user.name }}"
+    force: yes
+  when: traefik_toml.stat.exists == False
+
+- name: Check acme.json exists
+  stat:
+    path: "/opt/traefik_v1/acme/acme.json"
+  register: acme_json
+
+- name: Touch or create blank acme.json
+  file:
+    path: "/opt/traefik_v1/acme/acme.json"
+    state: touch
+    mode: 0600
+    owner: "{{ user.name }}"
+    group: "{{ user.name }}"
+  when: acme_json.stat.exists == False
+
+- name: Check rules.toml exists
+  stat:
+    path: "/opt/traefik_v1/rules.toml"
+  register: rules_toml
+
+- name: Touch or create blank rules.toml
+  file:
+    path: "/opt/traefik_v1/rules.toml"
+    state: touch
+    mode: 0775
+    owner: "{{ user.name }}"
+    group: "{{ user.name }}"
+  when: rules_toml.stat.exists == False
+
+- name: Check .htpasswd exists
+  stat:
+    path: "/opt/traefik_v1/.htpasswd"
+  register: htpasswd
+
+- name: Create htpasswd
+  htpasswd:
+    path: "/opt/traefik_v1/.htpasswd"
+    name: "{{ htpasswd.user }}"
+    password: "{{ htpasswd.pass }}"
+    owner: "{{ user.name }}"
+    group: "{{ user.name }}"
+    mode: 0664
+  when: htpasswd.stat.exists == False
+
+- name: Stop and remove any existing container
+  docker_container:
+    name: traefik_v1
+    state: absent
+
+- name: Create and start container
+  docker_container:
+    name: traefik_v1
+    image: "traefik:v1.7.24"
+    pull: yes
+    published_ports:
+      - "80:80"
+      - "443:443"
+      - "9876:8080"
+    env:
+      PUID: "{{ uid }}"
+      PGID: "{{ gid }}"
+      PROVIDER: "cloudflare"
+      CLOUDFLARE_EMAIL: "{{ cloudflare.email }}"
+      CLOUDFLARE_API_KEY: "{{ cloudflare.api }}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /opt/traefik_v1/traefik.toml:/etc/traefik/traefik.toml:ro
+      - /opt/traefik_v1/.htpasswd:/etc/traefik/.htpasswd:ro
+      - /opt/traefik_v1/rules.toml:/etc/traefik/rules.toml:ro
+      - /opt/traefik_v1/acme:/etc/traefik/acme
+    labels:
+      traefik.enable: "true"
+      traefik.backend: "traefik_v1"
+      traefik.frontend.redirect.entryPoint: "https"
+      traefik.frontend.rule: "Host:{{ traefik.subdomain|default('traefik',true) }}.{{ user.domain }}"
+      traefik.port: "8080"
+      traefik.docker.network: "cloudbox"
+    networks:
+      - name: cloudbox
+        aliases:
+          - traefik_v1
+    purge_networks: yes
+    restart_policy: always
+    state: started

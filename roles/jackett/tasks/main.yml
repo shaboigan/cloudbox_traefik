@@ -67,7 +67,7 @@
     pull: yes
     network_mode: "container:{{ vpn_host }}"
 #    published_ports:
-#      - "127.0.0.1:9117:9117"    
+#      - "127.0.0.1:9117:9117"
     env:
       BACKUP: "no"
       PUID: "{{ uid }}"
@@ -88,12 +88,14 @@
 #    labels:
 #      traefik.enable: "true"
 #      traefik.http.routers.jackett.entrypoints: "http"
-#      traefik.http.routers.jackett.rule: "Host:jackett.{{ user.domain }}"
-#      traefik.http.routers.jackett.middlewares: "https-redirect@file"
+#      traefik.http.routers.jackett.rule: "Host(`jackett.{{ user.domain }}`)"
+#      traefik.http.middlewares.jackett-https-redirect.redirectscheme.scheme: "https"
+#      traefik.http.routers.jackett.middlewares: "jackett-https-redirect"
 #      traefik.http.routers.jackett-secure.entrypoints: "https"
-#      traefik.http.routers.jackett-secure.rule: "Host:jackett.{{ user.domain }}"
+#      traefik.http.routers.jackett-secure.rule: "Host(`jackett.{{ user.domain }}`)"
 #      traefik.http.routers.jackett-secure.tls: "true"
-#      traefik.http.routers.jackett-secure.tls.certresolver: "http"
+#      traefik.http.routers.jackett-secure.tls.certresolver: "cloudflare"
+#      traefik.http.routers.jackett-secure.middlewares: "secured@file"
 #      traefik.http.routers.jackett-secure.service: "jackett"
 #      traefik.http.services.jackett.loadbalancer.server.port: "9117"
 #      traefik.docker.network: "cloudbox"

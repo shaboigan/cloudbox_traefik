@@ -17,8 +17,6 @@ ttp:
     default-whitelist:
       ipWhiteList:
         sourceRange:
-        - "10.0.0.0/24"
-        - "192.168.0.0/16"
         - "172.0.0.0/8"
 
     secured:
