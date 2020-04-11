@@ -4,7 +4,7 @@ local:
   destination: /mnt/local/Backups/{{ ( cloudbox_type | default('Cloudbox',true) ) }}
 rclone:
   enable: yes
-  destination: google:/Backups/{{ ( cloudbox_type | default('Cloudbox',true) ) }}
+  destination: {{ rclone.remote }}:/Backups/{{ ( cloudbox_type | default('Cloudbox',true) ) }}
 cron:
   cron_time: weekly
   cron_state: absent
