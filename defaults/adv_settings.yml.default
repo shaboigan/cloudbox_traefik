@@ -26,8 +26,6 @@ tautulli:
   subdomain: tautulli
 traefik:
   subdomain: traefik
-vnc:
-  subdomain: vnc
 gpu:
   intel: yes
   nvidia:
