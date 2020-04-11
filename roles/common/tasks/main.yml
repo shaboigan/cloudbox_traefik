@@ -87,7 +87,6 @@
       - "ksmtuned"
       - "git"
       - "pwgen"
-      - "rsync"
       - "logrotate"
       - "htop"
       - "iotop"

@@ -129,24 +129,6 @@
       - restore-service
       - cloudbox-restore-service
 
-  - name: "Synchronize '/etc/systemd/system' to '/opt/systemd-backup' for inclusion in backup"
-    shell: |
-      /usr/bin/rsync \
-        --delay-updates \
-        -F \
-        --compress \
-        --archive \
-        --no-recursive \
-        --no-links \
-        --no-perms \
-        --include='*.service' \
-        --include='*.mount' \
-        /etc/systemd/system/* /opt/systemd-backup/
-    args:
-      executable: /bin/bash
-      warn: no
-    ignore_errors: yes
-
   - name: "Copying crontabs to '/opt/crontab-backup' for inclusion in backup"
     shell: "cp -f /var/spool/cron/crontabs/* /opt/crontab-backup"
     ignore_errors: yes
@@ -539,23 +521,6 @@
     vars:
       message: "Cloudbox Backup: Rclone uploaded backup to '{{ rclone.destination }}'."
     when: (rclone.enable)
-
-  - name: "Use rsync to upload backup to '{{ rsync.destination }}'"
-    synchronize:
-      src: "{{ local.destination }}/"
-      dest: "{{ rsync.destination }}/"
-      set_remote_user: yes
-      compress: no
-    become: yes
-    become_user: "{{ user.name }}"
-    when: (rsync.enable)
-
-  - name: "Notify | Cloudbox Backup: Rsync uploaded backup to '{{ rsync.destination }}'"
-    include_role:
-      name: notify
-    vars:
-      message: "Cloudbox Backup: Rsync uploaded backup to '{{ rsync.destination }}'."
-    when: (rsync.enable)
 
   - name: Get Current Time
     shell: "date \"+%s\""
