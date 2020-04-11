@@ -82,7 +82,7 @@
 #      traefik.http.routers.sonarr4k-secure.entrypoints: "https"
 #      traefik.http.routers.sonarr4k-secure.rule: "Host(`sonarr4k.{{ user.domain }}`)"
 #      traefik.http.routers.sonarr4k-secure.tls: "true"
-#      traefik.http.routers.sonarr4k-secure.tls.certresolver: "cloudflare"
+#      traefik.http.routers.sonarr4k-secure.tls.certresolver: "letsEncrypt"
 #      traefik.http.routers.sonarr4k-secure.middlewares: "secured@file"
 #      traefik.http.routers.sonarr4k-secure.service: "sonarr4k"
 #      traefik.http.services.sonarr4k.loadbalancer.server.port: "8989"

@@ -100,7 +100,7 @@
 #      traefik.http.routers.sabnzbd-secure.entrypoints: "https"
 #      traefik.http.routers.sabnzbd-secure.rule: "Host(`sabnzbd.{{ user.domain }}`)"
 #      traefik.http.routers.sabnzbd-secure.tls: "true"
-#      traefik.http.routers.sabnzbd-secure.tls.certresolver: "cloudflare"
+#      traefik.http.routers.sabnzbd-secure.tls.certresolver: "letsEncrypt"
 #      traefik.http.routers.sabnzbd-secure.middlewares: "secured@file"
 #      traefik.http.routers.sabnzbd-secure.service: "sabnzbd"
 #      traefik.http.services.sabnzbd.loadbalancer.server.port: "8080"

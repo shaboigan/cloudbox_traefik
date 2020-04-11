@@ -63,7 +63,7 @@
 #      traefik.http.routers.netdata-secure.entrypoints: "https"
 #      traefik.http.routers.netdata-secure.rule: "Host(`netdata.{{ user.domain }}`)"
 #      traefik.http.routers.netdata-secure.tls: "true"
-#      traefik.http.routers.netdata-secure.tls.certresolver: "cloudflare"
+#      traefik.http.routers.netdata-secure.tls.certresolver: "letsEncrypt"
 #      traefik.http.routers.netdata-secure.middlewares: "secured@file"
 #      traefik.http.routers.netdata-secure.service: "netdata"
 #      traefik.http.services.netdata.loadbalancer.server.port: "19999"

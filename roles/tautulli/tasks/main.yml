@@ -65,7 +65,7 @@
 #      traefik.http.routers.tautulli-secure.entrypoints: "https"
 #      traefik.http.routers.tautulli-secure.rule: "Host(`{{ tautulli.subdomain|default('tautulli',true) }}.{{ user.domain }}`)"
 #      traefik.http.routers.tautulli-secure.tls: "true"
-#      traefik.http.routers.tautulli-secure.tls.certresolver: "cloudflare"
+#      traefik.http.routers.tautulli-secure.tls.certresolver: "letsEncrypt"
 #      traefik.http.routers.tautulli-secure.middlewares: "secured@file"
 #      traefik.http.routers.tautulli-secure.service: "tautulli"
 #      traefik.http.services.tautulli.loadbalancer.server.port: "8181"

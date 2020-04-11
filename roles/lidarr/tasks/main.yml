@@ -75,7 +75,7 @@
 #      traefik.http.routers.lidarr-secure.entrypoints: "https"
 #      traefik.http.routers.lidarr-secure.rule: "Host(`lidarr.{{ user.domain }}`)"
 #      traefik.http.routers.lidarr-secure.tls: "true"
-#      traefik.http.routers.lidarr-secure.tls.certresolver: "cloudflare"
+#      traefik.http.routers.lidarr-secure.tls.certresolver: "letsEncrypt"
 #      traefik.http.routers.lidarr-secure.middlewares: "secured@file"
 #      traefik.http.routers.lidarr-secure.service: "lidarr"
 #      traefik.http.services.lidarr.loadbalancer.server.port: "8686"

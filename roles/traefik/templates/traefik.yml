@@ -12,13 +12,14 @@ providers:
   docker:
     endpoint: "unix:///var/run/docker.sock"
     exposedByDefault: false
-  file:
-    filename: /opt/traefik/config.yml
 
 certificatesResolvers:
-  http:
+  cloudflare:
     acme:
       email: {{ cloudflare.email }}
-      storage: /opt/traefik/acme.json
-      httpChallenge:
-        entryPoint: http
+      storage: acme.json
+      dnsChallenge:
+        provider: cloudflare
+        resolvers:
+          - "1.1.1.1:53"
+          - "1.0.0.1:53"

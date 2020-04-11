@@ -78,6 +78,8 @@
     env:
       PUID: "{{ uid }}"
       PGID: "{{ gid }}"
+      CF_API_EMAIL: "{{ cloudflare.email }}"
+      CF_API_KEY: "{{ cloudflare.api }}"
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -96,7 +98,10 @@
       traefik.http.routers.traefik-secure.middlewares: "traefik-auth"
       traefik.http.routers.traefik-secure.tls: "true"
       traefik.http.routers.traefik-secure.tls.certresolver: "http"
-      traefik.http.routers.traefik-secure.service: "api@internal"
+      traefik.http.routers.traefik-secure.tls.certresolver: "cloudflare"
+      traefik.http.routers.traefik-secure.tls.domains[0].main: "{{ user.domain}}"
+      traefik.http.routers.traefik-secure.tls.domains[0].sans: "*.{{ user.domain}}"
+      traefik.http.routers.traefik-secure.service: "api@internal"      
       traefik.http.services.traefik.loadbalancer.server.port: "8080"
     networks:
       - name: cloudbox
