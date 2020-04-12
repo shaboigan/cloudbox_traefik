@@ -45,7 +45,7 @@
 
 - name: "Set Cloudbox Type in backup_config"
   replace:
-    path: "~/cloudbox/bacup_config.yml"
+    path: "~/cloudbox/backup_config.yml"
     regexp: 'Cloudbox'
     replace: "{{ cloudbox_type }}"
   tags:
@@ -55,7 +55,7 @@
 
 - name: "Set rclone remote in backup_config"
   replace:
-    path: "~/cloudbox/bacup_config.yml"
+    path: "~/cloudbox/backup_config.yml"
     regexp: 'rclone.remote'
     replace: "{{ rclone.remote }}"
   tags:
