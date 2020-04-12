@@ -1,10 +1,10 @@
 ---
 local:
   enable: yes
-  destination: /mnt/local/Backups/{{ ( cloudbox_type | default('Cloudbox',true) ) }}
+  destination: /mnt/local/Backups/Cloudbox
 rclone:
   enable: yes
-  destination: cloud-crypt:/Backups/{{ ( cloudbox_type | default('Cloudbox',true) ) }}
+  destination: {{ rclone.remote }}:/Backups/Cloudbox
 cron:
   cron_time: weekly
   cron_state: absent
