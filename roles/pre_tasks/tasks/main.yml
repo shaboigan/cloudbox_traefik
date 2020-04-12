@@ -49,6 +49,12 @@
     regexp: 'Cloudbox'
     replace: "{{ cloudbox_type }}"
 
+- name: "Set rclone remote in backup_config"
+  replace:
+    path: "~/cloudbox/bacup_config.yml"
+    regexp: 'rclone.remote'
+    replace: "{{ rclone.remote }}"
+
 - name: Sub Domain Tasks
   block:
 
