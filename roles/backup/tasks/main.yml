@@ -159,6 +159,8 @@
 
     - name: Create lists of ignored apps
       set_fact:
+        reverse_proxy_apps:
+          - traefik_v1
         torrent_apps:
           - deluge
 

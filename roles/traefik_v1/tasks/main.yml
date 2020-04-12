@@ -113,6 +113,7 @@
       traefik.frontend.rule: "Host:{{ traefik.subdomain|default('traefik',true) }}.{{ user.domain }}"
       traefik.port: "8080"
       traefik.docker.network: "cloudbox"
+      "com.github.cloudbox.cloudbox_managed": "true"      
     networks:
       - name: cloudbox
         aliases:
