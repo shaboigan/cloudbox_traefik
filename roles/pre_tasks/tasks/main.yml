@@ -28,23 +28,23 @@
   import_tasks: "subtasks/apt.yml"
   tags: always
 
+- name: "Set Cloudbox Type to 'cloudbox'"
+  set_fact:
+    cloudbox_type: "cloudbox"
+  tags: cloudbox
+
+- name: "Set Cloudbox Type to 'mediabox'"
+  set_fact:
+    cloudbox_type: "mediabox"
+  tags: mediabox
+
+- name: "Set Cloudbox Type to 'feederbox'"
+  set_fact:
+    cloudbox_type: "feederbox"
+  tags: feederbox
+
 - name: Sub Domain Tasks
   block:
-
-  - name: "Set Cloudbox Type to 'cloudbox'"
-    set_fact:
-      cloudbox_type: "cloudbox"
-    tags: cloudbox
-
-  - name: "Set Cloudbox Type to 'mediabox'"
-    set_fact:
-      cloudbox_type: "mediabox"
-    tags: mediabox
-
-  - name: "Set Cloudbox Type to 'feederbox'"
-    set_fact:
-      cloudbox_type: "feederbox"
-    tags: feederbox
 
   ## Add cloudbox_type subdomain
   - name: "Cloudflare: Add '{{ cloudbox_type }}' subdomain to '{{ user.domain }}'"
