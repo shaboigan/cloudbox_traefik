@@ -166,7 +166,7 @@
 
     - name: Filter out ignored apps from Docker containers list
       set_fact:
-        docker_containers: "{{ docker_containers | difference(torrent_apps) }}"
+        docker_containers: "{{ docker_containers | difference(reverse_proxy_apps+torrent_apps) }}"
 
     - name: Convert Docker containers list back to string
       set_fact:
