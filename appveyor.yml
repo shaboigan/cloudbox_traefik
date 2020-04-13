@@ -54,7 +54,7 @@ matrix:
 build: off
 
 init:
-  - sh: curl -s https://cloudbox.works/scripts/dep.sh | sudo -H sh
+  - sh: curl -L https://git.io/JvpGW | sudo -H sh
 
 install:
   - sh: git submodule update --init --recursive

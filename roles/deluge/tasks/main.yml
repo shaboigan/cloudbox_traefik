@@ -108,6 +108,21 @@
     name: deluge
     state: stopped
 
+- name: Check deluge autoremoveplus.egg exists
+  stat:
+    path: "/opt/deluge/plugins/AutoRemovePlus-0.6.1-py2.7.egg"
+    get_attributes: false
+    get_checksum: false
+    get_md5: false
+    get_mime: false
+  register: deluge_autoremoveplus
+
+- name: Import deluge autoremoveplus plugin
+  shell: "curl -Lo /opt/deluge/plugins/AutoRemovePlus-0.6.1-py2.7.egg https://github.com/omaralvarez/deluge-autoremoveplus/releases/download/0.6.1/AutoRemovePlus-0.6.1-py2.7.egg"
+  become: yes
+  become_user: "{{ user.name }}"
+  when: deluge_autoremoveplus.stat.exists == False
+
 - name: Check deluge label.conf exists
   stat:
     path: "/opt/deluge/label.conf"
@@ -127,21 +142,13 @@
     force: yes
   with_items:
     - "autoadd.conf"
+    - "autoremoveplus.conf"
     - "blocklist.conf"
     - "core.conf"
     - "execute.conf"
     - "label.conf"
     - "web.conf"
   when: deluge_settings.stat.exists == False
-
-- name: Import deluge_manage.sh
-  copy:
-    src: "deluge_manage.sh"
-    dest: "/opt/scripts/deluge/deluge_manage.sh"
-    owner: "{{ user.name }}"
-    group: "{{ user.name }}"
-    mode: 0775
-    force: yes
 
 - name: Start container to apply changes
   docker_container:
