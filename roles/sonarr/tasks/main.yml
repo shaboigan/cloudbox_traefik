@@ -19,7 +19,7 @@
 
 - name: Slurp hashed htpasswd
   slurp:
-    src: "/opt/traefik_v1/.htpasswd"
+    src: "/opt/traefik/.htpasswd"
   register: hashed
 
 - name: Set hashed password
@@ -73,21 +73,6 @@
       traefik.frontend.auth.basic: "{{ htpasswd }}"
       traefik.docker.network: "cloudbox"
       "com.github.cloudbox.cloudbox_managed": "true"
-#    labels:
-#      traefik.enable: "true"
-#      traefik.http.routers.sonarr.entrypoints: "http"
-#      traefik.http.routers.sonarr.rule: "Host(`sonarr.{{ user.domain }}`)"
-#      traefik.http.middlewares.sonarr-https-redirect.redirectscheme.scheme: "https"
-#      traefik.http.routers.sonarr.middlewares: "sonarr-https-redirect"
-#      traefik.http.routers.sonarr-secure.entrypoints: "https"
-#      traefik.http.routers.sonarr-secure.rule: "Host(`sonarr.{{ user.domain }}`)"
-#      traefik.http.routers.sonarr-secure.tls: "true"
-#      traefik.http.routers.sonarr-secure.tls.certresolver: "letsEncrypt"
-#      traefik.http.routers.sonarr-secure.middlewares: "secured@file"
-#      traefik.http.routers.sonarr-secure.service: "sonarr"
-#      traefik.http.services.sonarr.loadbalancer.server.port: "8989"
-#      traefik.docker.network: "cloudbox"
-#      "com.github.cloudbox.cloudbox_managed": "true"
     networks:
       - name: cloudbox
         aliases:

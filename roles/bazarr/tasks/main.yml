@@ -18,7 +18,7 @@
 
 - name: Slurp hashed htpasswd
   slurp:
-    src: "/opt/traefik_v1/.htpasswd"
+    src: "/opt/traefik/.htpasswd"
   register: hashed
 
 - name: Set hashed password
@@ -63,22 +63,6 @@
       traefik.frontend.auth.basic: "{{ htpasswd }}"
       traefik.docker.network: "cloudbox"
       "com.github.cloudbox.cloudbox_managed": "true"
-#    labels:
-#      traefik.enable: "true"
-#      traefik.http.routers.bazarr.entrypoints: "http"
-#      traefik.http.routers.bazarr.rule: "Host(`bazarr.{{ user.domain }}`)"
-#      traefik.http.middlewares.bazarr-https-redirect.redirectscheme.scheme: "https"
-#      traefik.http.middlewares.bazarr-auth.basicauth.users: "{{ htpasswd.user }}:{{ htpasswd.pass }}"
-#      traefik.http.routers.bazarr.middlewares: "bazarr-https-redirect"
-#      traefik.http.routers.bazarr-secure.entrypoints: "https"
-#      traefik.http.routers.bazarr-secure.rule: "Host(`bazarr.{{ user.domain }}`)"
-#      traefik.http.routers.bazarr-secure.tls: "true"
-#      traefik.http.routers.bazarr-secure.tls.certresolver: "letsEncrypt"
-#      traefik.http.routers.bazarr-secure.middlewares: "secured@file"
-#      traefik.http.routers.bazarr-secure.service: "bazarr"
-#      traefik.http.services.bazarr.loadbalancer.server.port: "6767"
-#      traefik.docker.network: "cloudbox"
-#      "com.github.cloudbox.cloudbox_managed": "true"
     networks:
       - name: cloudbox
         aliases:

@@ -93,24 +93,8 @@
       traefik.frontend.redirect.entryPoint: "https"
       traefik.frontend.rule: "Host:deluge.{{ user.domain }}"
       traefik.port: "8112"
-#      traefik.frontend.auth.basic: "{{ htpasswd }}"
       traefik.docker.network: "cloudbox"
       "com.github.cloudbox.cloudbox_managed": "true"
-#    labels:
-#      traefik.enable: "true"
-#      traefik.http.routers.deluge.entrypoints: "http"
-#      traefik.http.routers.deluge.rule: "Host(`deluge.{{ user.domain }}`)"
-#      traefik.http.middlewares.deluge-https-redirect.redirectscheme.scheme: "https"
-#      traefik.http.routers.deluge.middlewares: "deluge-https-redirect"
-#      traefik.http.routers.deluge-secure.entrypoints: "https"
-#      traefik.http.routers.deluge-secure.rule: "Host(`deluge.{{ user.domain }}`)"
-#      traefik.http.routers.deluge-secure.tls: "true"
-#      traefik.http.routers.deluge-secure.tls.certresolver: "letsEncrypt"
-#      traefik.http.routers.deluge-secure.middlewares: "secured@file"
-#      traefik.http.routers.deluge-secure.service: "deluge"
-#      traefik.http.services.deluge.loadbalancer.server.port: "8112"
-#      traefik.docker.network: "cloudbox"
-#      "com.github.cloudbox.cloudbox_managed": "true"
     networks:
       - name: cloudbox
         aliases:

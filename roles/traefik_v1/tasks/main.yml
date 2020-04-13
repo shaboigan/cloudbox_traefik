@@ -2,7 +2,7 @@
 # Title:         Cloudbox: Traefik 1.0 Role                             #
 # Author(s):     shaboigan                                              #
 # URL:                                                                  #
-# Docker Image:  traefik:v2.0                                           #
+# Docker Image:  traefik:v1.7.24                                        #
 # --                                                                    #
 #         Part of the Cloudbox project: https://cloudbox.works          #
 #########################################################################
@@ -18,18 +18,18 @@
 - name: Create traefik directories
   file: "path={{ item }} state=directory mode=0775 owner={{ user.name }} group={{ user.name }} recurse=yes"
   with_items:
-    - /opt/traefik_v1
-    - /opt/traefik_v1/acme
+    - /opt/traefik
+    - /opt/traefik/acme
 
 - name: Check traefik.toml exists
   stat:
-    path: "/opt/traefik_v1/traefik.toml"
+    path: "/opt/traefik/traefik.toml"
   register: traefik_toml
 
 - name: Import traefik.toml
   template:
     src: traefik.toml
-    dest: /opt/traefik_v1/traefik.toml
+    dest: /opt/traefik/traefik.toml
     mode: 0775
     owner: "{{ user.name }}"
     group: "{{ user.name }}"
@@ -38,12 +38,12 @@
 
 - name: Check acme.json exists
   stat:
-    path: "/opt/traefik_v1/acme/acme.json"
+    path: "/opt/traefik/acme/acme.json"
   register: acme_json
 
 - name: Touch or create blank acme.json
   file:
-    path: "/opt/traefik_v1/acme/acme.json"
+    path: "/opt/traefik/acme/acme.json"
     state: touch
     mode: 0600
     owner: "{{ user.name }}"
@@ -52,12 +52,12 @@
 
 - name: Check rules.toml exists
   stat:
-    path: "/opt/traefik_v1/rules.toml"
+    path: "/opt/traefik/rules.toml"
   register: rules_toml
 
 - name: Touch or create blank rules.toml
   file:
-    path: "/opt/traefik_v1/rules.toml"
+    path: "/opt/traefik/rules.toml"
     state: touch
     mode: 0775
     owner: "{{ user.name }}"
@@ -66,12 +66,12 @@
 
 - name: Check .htpasswd exists
   stat:
-    path: "/opt/traefik_v1/.htpasswd"
+    path: "/opt/traefik/.htpasswd"
   register: htpasswd
 
 - name: Create htpasswd
   htpasswd:
-    path: "/opt/traefik_v1/.htpasswd"
+    path: "/opt/traefik/.htpasswd"
     name: "{{ htpasswd.user }}"
     password: "{{ htpasswd.pass }}"
     owner: "{{ user.name }}"
@@ -81,12 +81,12 @@
 
 - name: Stop and remove any existing container
   docker_container:
-    name: traefik_v1
+    name: traefik
     state: absent
 
 - name: Create and start container
   docker_container:
-    name: traefik_v1
+    name: traefik
     image: "traefik:v1.7.24"
     pull: yes
     published_ports:
@@ -102,13 +102,13 @@
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /etc/localtime:/etc/localtime:ro
-      - /opt/traefik_v1/traefik.toml:/etc/traefik/traefik.toml:ro
-      - /opt/traefik_v1/.htpasswd:/etc/traefik/.htpasswd:ro
-      - /opt/traefik_v1/rules.toml:/etc/traefik/rules.toml:ro
-      - /opt/traefik_v1/acme:/etc/traefik/acme
+      - /opt/traefik/traefik.toml:/etc/traefik/traefik.toml:ro
+      - /opt/traefik/.htpasswd:/etc/traefik/.htpasswd:ro
+      - /opt/traefik/rules.toml:/etc/traefik/rules.toml:ro
+      - /opt/traefik/acme:/etc/traefik/acme
     labels:
       traefik.enable: "true"
-      traefik.backend: "traefik_v1"
+      traefik.backend: "traefik"
       traefik.frontend.redirect.entryPoint: "https"
       traefik.frontend.rule: "Host:{{ traefik.subdomain|default('traefik',true) }}.{{ user.domain }}"
       traefik.port: "8080"
@@ -117,7 +117,7 @@
     networks:
       - name: cloudbox
         aliases:
-          - traefik_v1
+          - traefik
     purge_networks: yes
     restart_policy: always
     state: started
