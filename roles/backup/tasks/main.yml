@@ -39,10 +39,10 @@
     slack:
       token: "{{ slack.token }}"
       msg: "Cloudbox Backup: Started {{ use_snapshot | ternary('(snapshot-enabled) ','') }}backup task."
-      channel: '#servers'
+      channel: "#servers"
       color: good
-      username: ''
-      icon_url: ''
+      username: ""
+      icon_url: ""
 
   - name: "Create 'backup.lock'."
     file:
@@ -183,10 +183,10 @@
       slack:
         token: "{{ slack.token }}"
         msg: "Cloudbox Backup: Stopped Docker containers."
-        channel: '#servers'
+        channel: "#servers"
         color: warning
-        username: ''
-        icon_url: ''
+        username: ""
+        icon_url: ""
 
     when: (docker_containers | trim | length > 0)
 
@@ -314,10 +314,10 @@
       slack:
         token: "{{ slack.token }}"
         msg: "Cloudbox Backup: Started Docker containers."
-        channel: '#servers'
+        channel: "#servers"
         color: good
-        username: ''
-        icon_url: ''
+        username: ""
+        icon_url: ""
       when: (docker_containers | trim | length > 0)
 
     when: (use_snapshot)
@@ -415,10 +415,10 @@
     slack:
       token: "{{ slack.token }}"
       msg: "Cloudbox Backup: Backup created with total size of {{ backup_size }}."
-      channel: '#servers'
+      channel: "#servers"
       color: good
-      username: ''
-      icon_url: ''
+      username: ""
+      icon_url: ""
 
   # Start Plexdrive and Docker containers when snapshot is not enabled
 
@@ -450,10 +450,10 @@
       slack:
         token: "{{ slack.token }}"
         msg: "Cloudbox Backup: Started Docker containers"
-        channel: '#servers'
+        channel: "#servers"
         color: good
-        username: ''
-        icon_url: ''
+        username: ""
+        icon_url: ""
       when: (docker_containers | trim | length > 0)
 
     when: (not use_snapshot)
@@ -535,10 +535,10 @@
     slack:
       token: "{{ slack.token }}"
       msg: "Cloudbox Backup: Rclone uploaded backup to '{{ rclone.destination }}'."
-      channel: '#servers'
+      channel: "#servers"
       color: good
-      username: ''
-      icon_url: ''
+      username: ""
+      icon_url: ""
     when: (rclone.enable)
 
   - name: Get Current Time
@@ -557,10 +557,10 @@
     slack:
       token: "{{ slack.token }}"
       msg: "Cloudbox Backup: Finished Cloudbox {{ use_snapshot | ternary('(snapshot-enabled) ','') }}backup task in {{ total_time }} minutes."
-      channel: '#servers'
+      channel: "#servers"
       color: good
-      username: ''
-      icon_url: ''
+      username: ""
+      icon_url: ""
 
   - name: "Start 'cloudplow' service"
     systemd:
@@ -651,10 +651,10 @@
     slack:
       token: "{{ slack.token }}"
       msg: "Cloudbox Backup: Backup terminated due to an error."
-      channel: '#servers'
+      channel: "#servers"
       color: danger
-      username: ''
-      icon_url: ''
+      username: ""
+      icon_url: ""
 
   always:
   - name: "Remove 'backup.lock'"
