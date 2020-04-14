@@ -82,7 +82,7 @@
     color: good
     username: ""
     icon_url: ""
-when: (unencrypted_files_list | trim | length > 0)
+  when: (unencrypted_files_list | trim | length > 0)
 
 - name: Restore Service | Print error message when config file(s) were encrypted successfully
   debug:
