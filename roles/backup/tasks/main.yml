@@ -37,19 +37,12 @@
 
   - name: "Slack | Cloudbox Backup: Started Cloudbox backup task"
     slack:
-      token: TCR6DM06A/B011S8J49D1/j4egROt2DU3vg3KW0npHTrNA
+      token: {{ slack.token }}
       msg: "Cloudbox Backup: Started {{ use_snapshot | ternary('(snapshot-enabled) ','') }}backup task."
       channel: '#servers'
       color: good
       username: ''
       icon_url: ''
-
-
-  - name: "Notify | Cloudbox Backup: Started Cloudbox backup task"
-    include_role:
-      name: notify
-    vars:
-      message: "Cloudbox Backup: Started {{ use_snapshot | ternary('(snapshot-enabled) ','') }}backup task."
 
   - name: "Create 'backup.lock'."
     file:
@@ -186,11 +179,14 @@
       shell: "docker stop {{ docker_containers }}"
       ignore_errors: yes
 
-    - name: "Notify | Cloudbox Backup: Stopped Docker containers"
-      include_role:
-        name: notify
-      vars:
-        message: "Cloudbox Backup: Stopped Docker containers."
+    - name: "Slack | Cloudbox Backup: Stopped Docker containers"
+      slack:
+        token: {{ slack.token }}
+        msg: "Cloudbox Backup: Stopped Docker containers."
+        channel: '#servers'
+        color: warning
+        username: ''
+        icon_url: ''
 
     when: (docker_containers | trim | length > 0)
 
@@ -314,11 +310,14 @@
       ignore_errors: yes
       when: (docker_containers | trim | length > 0)
 
-    - name: "Snapshot | Notify | Cloudbox Backup: Started Docker containers"
-      include_role:
-        name: notify
-      vars:
-        message: "Cloudbox Backup: Started Docker containers."
+    - name: "Snapshot | Slack | Cloudbox Backup: Started Docker containers"
+      slack:
+        token: {{ slack.token }}
+        msg: "Cloudbox Backup: Started Docker containers."
+        channel: '#servers'
+        color: good
+        username: ''
+        icon_url: ''
       when: (docker_containers | trim | length > 0)
 
     when: (use_snapshot)
@@ -412,12 +411,14 @@
     set_fact:
       backup_size: "{{ (backup_new.stdout|int) | filesizeformat }}"
 
-  - name: "Notify | Cloudbox Backup: Backup created with total size of {{ backup_size }}."
-    include_role:
-      name: notify
-    vars:
-      message: "Cloudbox Backup: Backup created with total size of {{ backup_size }}."
-    ignore_errors: yes
+  - name: "Slack | Cloudbox Backup: Backup created with total size of {{ backup_size }}."
+    slack:
+      token: {{ slack.token }}
+      msg: "Cloudbox Backup: Backup created with total size of {{ backup_size }}."
+      channel: '#servers'
+      color: good
+      username: ''
+      icon_url: ''
 
   # Start Plexdrive and Docker containers when snapshot is not enabled
 
@@ -445,11 +446,14 @@
       ignore_errors: yes
       when: (docker_containers | trim | length > 0)
 
-    - name: "Notify | Cloudbox Backup: Started Docker containers"
-      include_role:
-        name: notify
-      vars:
-        message: "Cloudbox Backup: Started Docker containers."
+    - name: "Slack | Cloudbox Backup: Started Docker containers"
+      slack:
+        token: {{ slack.token }}
+        msg: "Cloudbox Backup: Started Docker containers"
+        channel: '#servers'
+        color: good
+        username: ''
+        icon_url: ''
       when: (docker_containers | trim | length > 0)
 
     when: (not use_snapshot)
@@ -527,11 +531,14 @@
     become_user: "{{ user.name }}"
     when: (rclone.enable)
 
-  - name: "Notify | Cloudbox Backup: Rclone uploaded backup to '{{ rclone.destination }}'"
-    include_role:
-      name: notify
-    vars:
-      message: "Cloudbox Backup: Rclone uploaded backup to '{{ rclone.destination }}'."
+  - name: "Slack | Cloudbox Backup: Rclone uploaded backup to '{{ rclone.destination }}'"
+    slack:
+      token: {{ slack.token }}
+      msg: "Cloudbox Backup: Rclone uploaded backup to '{{ rclone.destination }}'."
+      channel: '#servers'
+      color: good
+      username: ''
+      icon_url: ''
     when: (rclone.enable)
 
   - name: Get Current Time
@@ -546,11 +553,14 @@
     set_fact:
       total_time: "{{ (((end_time|int) - (start_time|int)) / 60) | int | abs }}"
 
-  - name: "Notify | Cloudbox Backup: Finished Cloudbox backup task in {{ total_time }} minutes"
-    include_role:
-      name: notify
-    vars:
-      message: "Cloudbox Backup: Finished Cloudbox {{ use_snapshot | ternary('(snapshot-enabled) ','') }}backup task in {{ total_time }} minutes."
+  - name: "Slack | Cloudbox Backup: Finished Cloudbox backup task in {{ total_time }} minutes"
+    slack:
+      token: {{ slack.token }}
+      msg: "Cloudbox Backup: Finished Cloudbox {{ use_snapshot | ternary('(snapshot-enabled) ','') }}backup task in {{ total_time }} minutes."
+      channel: '#servers'
+      color: good
+      username: ''
+      icon_url: ''
 
   - name: "Start 'cloudplow' service"
     systemd:
@@ -637,11 +647,14 @@
     debug:
       msg: 'Backup terminated due to an error'
 
-  - name: "Notify | Cloudbox Backup: Backup terminated due to an error"
-    include_role:
-      name: notify
-    vars:
-      message: "Cloudbox Backup: Backup terminated due to an error."
+  - name: "Slack | Cloudbox Backup: Backup terminated due to an error"
+    slack:
+      token: {{ slack.token }}
+      msg: "Cloudbox Backup: Backup terminated due to an error."
+      channel: '#servers'
+      color: danger
+      username: ''
+      icon_url: ''
 
   always:
   - name: "Remove 'backup.lock'"

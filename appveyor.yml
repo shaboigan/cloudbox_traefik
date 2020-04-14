@@ -32,7 +32,6 @@ skip_commits:
     - 'roles/cloudflare/**/*'
     - 'roles/feeder/**/*'
     - 'roles/netdata/**/*'
-    - 'roles/notify/**/*'
     - 'roles/nvidia/**/*'
     - 'roles/nzbthrottle/**/*'
     - 'roles/plex_auth_token/**/*'
