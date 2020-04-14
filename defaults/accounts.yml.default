@@ -13,7 +13,8 @@ plex:
 htpasswd:
   user:
   pass:
-apprise:
+slack:
+  token:
 trakt:
   id:
   secret:
