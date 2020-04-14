@@ -76,7 +76,7 @@
 
   - name: "Restore Service | Slack | Cloudbox Backup: Config files were not encrypted successfully encrypted"
     slack:
-      token: {{ slack.token }}
+      token: "{{ slack.token }}"
       msg: "Cloudbox Backup: The following config file(s) were NOT encrypted successfully: '{{ unencrypted_files_list | trim }}'. Restore Service will now be skipped."
       channel: '#servers'
       color: good
@@ -112,7 +112,7 @@
 
   - name: "Restore Service | Slack | Cloudbox Backup: Config files were too large to upload to the Cloudbox Restore Service"
     slack:
-      token: {{ slack.token }}
+      token: "{{ slack.token }}"
       msg: "Cloudbox Backup: The following encrypted config file(s) were too large to upload to the Cloudbox Restore Service: '{{ files_too_large_to_upload_list | trim }}'"
       channel: '#servers'
       color: danger
@@ -131,7 +131,7 @@
 
   - name: "Restore Service | Slack | Cloudbox Backup: Config files were successfully encrypted and uploaded to the Cloudbox Restore Service"
     slack:
-      token: {{ slack.token }}
+      token: "{{ slack.token }}"
       msg: "Cloudbox Backup: Config files uploaded to the Cloudbox Restore Service."
       channel: '#servers'
       color: good

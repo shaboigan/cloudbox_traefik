@@ -37,7 +37,7 @@
 
   - name: "Slack | Cloudbox Backup: Started Cloudbox backup task"
     slack:
-      token: {{ slack.token }}
+      token: "{{ slack.token }}"
       msg: "Cloudbox Backup: Started {{ use_snapshot | ternary('(snapshot-enabled) ','') }}backup task."
       channel: '#servers'
       color: good
@@ -181,7 +181,7 @@
 
     - name: "Slack | Cloudbox Backup: Stopped Docker containers"
       slack:
-        token: {{ slack.token }}
+        token: "{{ slack.token }}"
         msg: "Cloudbox Backup: Stopped Docker containers."
         channel: '#servers'
         color: warning
@@ -312,7 +312,7 @@
 
     - name: "Snapshot | Slack | Cloudbox Backup: Started Docker containers"
       slack:
-        token: {{ slack.token }}
+        token: "{{ slack.token }}"
         msg: "Cloudbox Backup: Started Docker containers."
         channel: '#servers'
         color: good
@@ -413,7 +413,7 @@
 
   - name: "Slack | Cloudbox Backup: Backup created with total size of {{ backup_size }}."
     slack:
-      token: {{ slack.token }}
+      token: "{{ slack.token }}"
       msg: "Cloudbox Backup: Backup created with total size of {{ backup_size }}."
       channel: '#servers'
       color: good
@@ -448,7 +448,7 @@
 
     - name: "Slack | Cloudbox Backup: Started Docker containers"
       slack:
-        token: {{ slack.token }}
+        token: "{{ slack.token }}"
         msg: "Cloudbox Backup: Started Docker containers"
         channel: '#servers'
         color: good
@@ -533,7 +533,7 @@
 
   - name: "Slack | Cloudbox Backup: Rclone uploaded backup to '{{ rclone.destination }}'"
     slack:
-      token: {{ slack.token }}
+      token: "{{ slack.token }}"
       msg: "Cloudbox Backup: Rclone uploaded backup to '{{ rclone.destination }}'."
       channel: '#servers'
       color: good
@@ -555,7 +555,7 @@
 
   - name: "Slack | Cloudbox Backup: Finished Cloudbox backup task in {{ total_time }} minutes"
     slack:
-      token: {{ slack.token }}
+      token: "{{ slack.token }}"
       msg: "Cloudbox Backup: Finished Cloudbox {{ use_snapshot | ternary('(snapshot-enabled) ','') }}backup task in {{ total_time }} minutes."
       channel: '#servers'
       color: good
@@ -649,7 +649,7 @@
 
   - name: "Slack | Cloudbox Backup: Backup terminated due to an error"
     slack:
-      token: {{ slack.token }}
+      token: "{{ slack.token }}"
       msg: "Cloudbox Backup: Backup terminated due to an error."
       channel: '#servers'
       color: danger
