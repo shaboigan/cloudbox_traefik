@@ -35,6 +35,16 @@
   - name: Snapshot
     import_tasks: "snapshot.yml"
 
+  - name: "Slack | Cloudbox Backup: Started Cloudbox backup task"
+    slack:
+      token: TCR6DM06A/B011S8J49D1/j4egROt2DU3vg3KW0npHTrNA
+      msg: "Cloudbox Backup: Started {{ use_snapshot | ternary('(snapshot-enabled) ','') }}backup task."
+      channel: '#servers'
+      color: good
+      username: ''
+      icon_url: ''
+
+
   - name: "Notify | Cloudbox Backup: Started Cloudbox backup task"
     include_role:
       name: notify
