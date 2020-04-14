@@ -74,15 +74,15 @@
       - "Cloudbox Restore Service will now be skipped."
   when: (unencrypted_files_list | trim | length > 0)
 
-  - name: "Restore Service | Slack | Cloudbox Backup: Config files were not encrypted successfully encrypted"
-    slack:
-      token: "{{ slack.token }}"
-      msg: "Cloudbox Backup: The following config file(s) were NOT encrypted successfully: '{{ unencrypted_files_list | trim }}'. Restore Service will now be skipped."
-      channel: "#servers"
-      color: good
-      username: ""
-      icon_url: ""
-  when: (unencrypted_files_list | trim | length > 0)
+- name: "Restore Service | Slack | Cloudbox Backup: Config files were not encrypted successfully encrypted"
+  slack:
+    token: "{{ slack.token }}"
+    msg: "Cloudbox Backup: The following config file(s) were NOT encrypted successfully: '{{ unencrypted_files_list | trim }}'. Restore Service will now be skipped."
+    channel: "#servers"
+    color: good
+    username: ""
+    icon_url: ""
+when: (unencrypted_files_list | trim | length > 0)
 
 - name: Restore Service | Print error message when config file(s) were encrypted successfully
   debug:
