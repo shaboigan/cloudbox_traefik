@@ -166,6 +166,7 @@
           - traefik
         torrent_apps:
           - deluge
+          - qbittorrent
 
     - name: Filter out ignored apps from Docker containers list
       set_fact:
