@@ -44,15 +44,10 @@
       - "/mnt:/mnt"
     labels:
       traefik.enable: "true"
-      traefik.http.routers.trackarr.entrypoints: "http"
-      traefik.http.routers.trackarr.rule: "Host:trackarr.{{ user.domain }}"
-      traefik.http.routers.trackarr.middlewares: "https-redirect@file"
-      traefik.http.routers.trackarr-secure.entrypoints: "https"
-      traefik.http.routers.trackarr-secure.rule: "Host:trackarr.{{ user.domain }}"
-      traefik.http.routers.trackarr-secure.tls: "true"
-      traefik.http.routers.trackarr-secure.tls.certresolver: "http"
-      traefik.http.routers.trackarr-secure.service: "trackarr"
-      traefik.http.services.trackarr.loadbalancer.server.port: 7337
+      traefik.backend: "trackarr"
+      traefik.frontend.redirect.entryPoint: "https"
+      traefik.frontend.rule: "Host:trackarr.{{ user.domain }}"
+      traefik.port: "7337"
       traefik.docker.network: "cloudbox"
       "com.github.cloudbox.cloudbox_managed": "true"
     networks:
