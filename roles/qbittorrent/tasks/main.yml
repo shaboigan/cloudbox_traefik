@@ -67,10 +67,9 @@
     pull: yes
     capabilities:
       - NET_ADMIN
-    published_ports:
-      - "127.0.0.1:8090:8090"
-      - "6881:6881"
-      - "6881:6881/udp"
+    network_mode: "container:{{ vpn_host }}"
+#    published_ports:
+#      - "127.0.0.1:8090:8090"
       #- "{{ vpn.port }}:{{ vpn.port }}"
       # jackett port
 #      - "127.0.0.1:9117:9117"
@@ -78,7 +77,7 @@
       PUID: "{{ uid }}"
       PGID: "{{ gid }}"
       UMASK: "000"
-      VPN_ENABLED: "{{ vpn.enable }}"
+      VPN_ENABLED: "no"
       VPN_PROV: "airvpn"
       ENABLE_PRIVOXY: "no"
       LAN_NETWORK: "172.18.0.0/16"
@@ -95,10 +94,10 @@
       traefik.port: "8090"
       traefik.docker.network: "cloudbox"
       "com.github.cloudbox.cloudbox_managed": "true"
-    networks:
-      - name: cloudbox
-        aliases:
-          - qbittorrent
+#    networks:
+#      - name: cloudbox
+#        aliases:
+#          - qbittorrent
     purge_networks: yes
     restart_policy: unless-stopped
     state: started

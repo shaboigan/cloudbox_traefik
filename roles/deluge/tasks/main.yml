@@ -74,6 +74,9 @@
       - "{{ vpn.port }}:{{ vpn.port }}"
       # jackett port
       - "127.0.0.1:9117:9117"
+      # qbittorrent temporary ports
+      - "127.0.0.1:8090:8090"
+      - "27633:27633"
     env:
       PUID: "{{ uid }}"
       PGID: "{{ gid }}"
