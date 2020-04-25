@@ -18,3 +18,4 @@ slack:
 trakt:
   id:
   secret:
+  token:
