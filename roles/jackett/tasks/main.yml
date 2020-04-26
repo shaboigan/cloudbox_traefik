@@ -33,15 +33,15 @@
 - name: Set vpn host container
   block:
 
-  - name: Check if deluge is using vpn
+  - name: Check if qbittorrent is using vpn
     stat:
-      path: "/opt/deluge/openvpn/config.ovpn"
-    register: deluge_vpn
+      path: "/opt/qbittorrent/openvpn/config.ovpn"
+    register: qbittorrent_vpn
 
-  - name: Set deluge as the vpn host container
+  - name: Set qbittorrent as the vpn host container
     set_fact:
-      vpn_host: deluge
-    when: deluge_vpn.stat.exists
+      vpn_host: qbittorrent
+    when: qbittorrent_vpn.stat.exists
 
   - name: Check if sabnzbd is using vpn
     block:
@@ -56,7 +56,7 @@
         vpn_host: sabnzbd
       when: sabnzbd_vpn.stat.exists
 
-    when: not deluge_vpn.stat.exists      
+    when: not qbittorrent_vpn.stat.exists      
 
   when: (vpn.enable|default(false,true))
 

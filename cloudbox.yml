@@ -30,7 +30,7 @@
     - { role: ombi, tags: ['cloudbox', 'feederbox', 'ombi'] }
     - { role: plex_autoscan, tags: ['cloudbox', 'mediabox', 'plex_autoscan'] }
     - { role: cloudplow, tags: ['cloudbox', 'feederbox', 'cloudplow'], when: ['use_remote'] }
-    - { role: deluge, tags: ['cloudbox', 'feederbox', 'deluge'], when: [ 'use_torrents' ] }    
+    - { role: qbittorrent, tags: ['cloudbox', 'feederbox', 'qbittorrent'], when: [ 'use_torrents' ] }
     - { role: sabnzbd, tags: ['cloudbox', 'feederbox', 'sabnzbd'], when: ['use_nzbs'] }
     - { role: jackett, tags: ['cloudbox', 'feederbox', 'jackett'], when: ['use_torrents'] }
     - { role: nzbhydra2, tags: ['cloudbox', 'feederbox', 'nzbhydra2'], when: ['use_nzbs'] }
@@ -43,7 +43,6 @@
     - { role: sub-zero-plugin, tags: ['sub-zero-plugin', 'reinstall-sub-zero-plugin'] }
     - { role: webtools-plugin, tags: ['webtools-plugin', 'reinstall-webtools-plugin'] }
     - { role: subliminal, tags: ['subliminal'] }
-    - { role: qbittorrent, tags: ['qbittorrent'] }
     - { role: watchtower, tags: ['watchtower'] }
     - { role: traktarr, tags: ['traktarr'] }
     - { role: plex_dupefinder, tags: ['plex_dupefinder'] }
