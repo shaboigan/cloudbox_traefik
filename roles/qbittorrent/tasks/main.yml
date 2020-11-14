@@ -100,3 +100,11 @@
     purge_networks: yes
     restart_policy: unless-stopped
     state: started
+
+- name: Settings Tweaks
+  include_tasks: "subtasks/qbittorrent_settings.yml"
+  when: not (
+        (qBittorrent_conf.stat.exists)
+        or
+        (continuous_integration)
+    )

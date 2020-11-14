@@ -50,7 +50,7 @@
     - { role: netdata, tags: ['netdata'] }
     - { role: znc, tags: ['znc'] }
     - { role: plex_patrol, tags: ['plex_patrol'] }
-    - { role: bazarr, tags: ['bazarr'] }
+    - { role: bazarr, tags: ['cloudbox', 'feederbox', 'bazarr'] }
     - { role: python-plexlibrary, tags: ['python-plexlibrary'] }
     - { role: nzbthrottle, tags: ['nzbthrottle'] }
     - { role: drive_strm, tags: ['drive_strm', 'drive_strm_rebuild'] }
