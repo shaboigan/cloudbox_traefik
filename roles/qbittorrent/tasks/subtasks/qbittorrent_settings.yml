@@ -24,7 +24,7 @@
     state: stopped
 
 - name: Import qBittorrent settings
-  copy:
+  template:
     src: "qBittorrent.conf"
     dest: "/opt/qbittorrent/qBittorrent/config/qBittorrent.conf"
     owner: "{{ user.name }}"
