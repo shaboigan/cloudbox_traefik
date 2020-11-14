@@ -63,7 +63,7 @@
 - name: Create and start container
   docker_container:
     name: qbittorrent
-    image: binhex/arch-qbittorrentvpn:latest
+    image: binhex/arch-qbittorrentvpn:4.3.0-1-02
     pull: yes
     capabilities:
       - NET_ADMIN
@@ -81,7 +81,7 @@
       ENABLE_PRIVOXY: "no"
       LAN_NETWORK: "172.18.0.0/16"
       NAME_SERVERS: "209.222.18.222,84.200.69.80,37.235.1.174,1.1.1.1,209.222.18.218,37.235.1.177,84.200.70.40,1.0.0.1"
-      ADDITIONAL_PORTS: #"{{ vpn.port }}:{{ vpn.port }}"
+      ADDITIONAL_PORTS: "{{ vpn.port }}:{{ vpn.port }}"
       WEBUI_PORT: 8090
       DEBUG: "false"
     volumes: "{{ default_volumes + torrents_downloads_path|default([]) }}"
