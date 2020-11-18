@@ -1,0 +1,78 @@
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+- name: "Set DNS Record on CloudFlare"
+  include_role:
+    name: cloudflare-dns
+  vars:
+    subdomain: "{{ vnc.subdomain|default('vnc',true) }}"
+  when: cloudflare_enabled
+
+- name: Slurp hashed htpasswd
+  slurp:
+    src: "/opt/traefik/.htpasswd"
+  register: hashed
+
+- name: Set hashed password
+  set_fact:
+    htpasswd: "{{ hashed['content'] | b64decode }}"
+
+- name: "Check if qbittorrent is running vpn"
+  stat:
+    path: "/opt/qbittorrent/openvpn/config.ovpn"
+  register: qbittorrent
+
+- name: "Check if sabnzbd is running vpn"
+  stat:
+    path: "/opt/sabnzbd/openvpn/config.ovpn"
+  register: sabnzbd
+
+- name: Set vpn fact
+  set_fact:
+    vpn: "qbittorrent"
+  when: (qbittorrent.stat.exists) and (not sabnzbd.stat.exists)
+
+- name: Set vpn fact
+  set_fact:
+    vpn: "sabnzbd"
+  when: (not qbittorrent.stat.exists) and (sabnzbd.stat.exists)
+
+- name: Set vpn fact
+  set_fact:
+    vpn: "sabnzbd"
+  when: (qbittorrent.stat.exists) and (sabnzbd.stat.exists)
+
+- name: Stop and remove any existing container
+  docker_container:
+    name: vnc
+    state: absent
+
+- name: Create vnc directories
+  file: "path={{ item }} state=directory mode=0775 owner={{ user.name }} group={{ user.name }}"
+  with_items:
+    - /opt/vnc
+
+- name: Create and start container
+  docker_container:
+    name: vnc
+    image: "consol/ubuntu-xfce-vnc"
+    pull: yes
+    env:
+      USER_ID: "{{ uid }}"
+      GROUP_ID: "{{ gid }}"
+    network_mode: "container:{{ vpn }}"
+    labels:
+      traefik.enable: "true"
+      traefik.backend: "vnc"
+      traefik.frontend.redirect.entryPoint: "https"
+      traefik.frontend.rule: "Host:{{ vnc.subdomain|default('vnc',true) }}.{{ user.domain }}"
+      traefik.port: "6901"
+      traefik.frontend.auth.basic: "{{ htpasswd }}"
+      traefik.docker.network: "cloudbox"
+      "com.github.cloudbox.cloudbox_managed": "true"
+    volumes:
+      - "/opt/vnc:/config"
+    purge_networks: yes
+    restart_policy: unless-stopped
+    state: started
