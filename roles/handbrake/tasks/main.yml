@@ -1,0 +1,163 @@
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+- name: "Set DNS Record on CloudFlare"
+  include_role:
+    name: cloudflare-dns
+  vars:
+    subdomain: handbrake
+
+- name: Slurp hashed htpasswd
+  slurp:
+    src: "/opt/traefik/.htpasswd"
+  register: hashed
+
+- name: Set hashed password
+  set_fact:
+    htpasswd: "{{ hashed['content'] | b64decode }}"
+
+- name: Install encoding tools
+  apt: name="{{ item }}" state=present update_cache=yes
+  become: true
+  with_items:
+    - mediainfo
+    - atomicparsley
+
+- name: Stop and remove any existing container
+  docker_container:
+    name: handbrake
+    state: absent
+
+- name: Create handbrake directories
+  file: "path={{ item }} state=directory mode=0775 owner={{ user.name }} group={{ user.name }}"
+  with_items:
+    - /opt/handbrake
+    - /opt/scripts/handbrake
+    - /mnt/local/handbrake
+    - /mnt/local/handbrake/source
+    - /mnt/local/handbrake/watch
+    - /mnt/local/handbrake/watch/24.0
+    - /mnt/local/handbrake/watch/24.5
+    - /mnt/local/handbrake/watch/25.0
+    - /mnt/local/handbrake/watch/25.5
+    - /mnt/local/handbrake/watch/26.0
+    - /mnt/local/handbrake/watch/26.5
+    - /mnt/local/handbrake/watch/27.0
+    - /mnt/local/handbrake/watch/27.5
+    - /mnt/local/handbrake/watch/28.0
+    - /mnt/local/handbrake/watch/28.5
+    - /mnt/local/handbrake/watch/29.0
+    - /mnt/local/handbrake/watch/29.5
+    - /mnt/local/handbrake/watch/30.0
+    - /mnt/local/handbrake/output
+
+- name: Create and start container
+  docker_container:
+    name: handbrake
+    image: "jlesage/handbrake:latest"
+    pull: yes
+    published_ports:
+      - "127.0.0.1:5800:5800"
+    env:
+      USER_ID: "{{ uid }}"
+      GROUP_ID: "{{ gid }}"
+      AUTOMATED_CONVERSION_MAX_WATCH_FOLDERS: 13
+      AUTOMATED_CONVERSION_PRESET: 24
+      AUTOMATED_CONVERSION_PRESET_2: 24.5
+      AUTOMATED_CONVERSION_PRESET_3: 25
+      AUTOMATED_CONVERSION_PRESET_4: 25.5
+      AUTOMATED_CONVERSION_PRESET_5: 26
+      AUTOMATED_CONVERSION_PRESET_6: 26.5
+      AUTOMATED_CONVERSION_PRESET_7: 27
+      AUTOMATED_CONVERSION_PRESET_8: 27.5
+      AUTOMATED_CONVERSION_PRESET_9: 28
+      AUTOMATED_CONVERSION_PRESET_10: 28.5
+      AUTOMATED_CONVERSION_PRESET_11: 29
+      AUTOMATED_CONVERSION_PRESET_12: 29.5
+      AUTOMATED_CONVERSION_PRESET_13: 30
+      APP_NICENESS: "10"
+      HANDBRAKE_DEBUG: 0
+    labels:
+      traefik.enable: "true"
+      traefik.backend: "handbrake"
+      traefik.frontend.redirect.entryPoint: "https"
+      traefik.frontend.rule: "Host:handbrake.{{ user.domain }}"
+      traefik.port: "5800"
+      traefik.frontend.auth.basic: "{{ htpasswd }}"
+      traefik.docker.network: "cloudbox"
+      "com.github.cloudbox.cloudbox_managed": "true"
+    volumes:
+      - "/opt/handbrake:/config:rw"
+      - "/mnt/local/handbrake/watch/24.0:/watch:rw"
+      - "/mnt/local/handbrake/watch/24.5:/watch2:rw"
+      - "/mnt/local/handbrake/watch/25.0:/watch3:rw"
+      - "/mnt/local/handbrake/watch/25.5:/watch4:rw"
+      - "/mnt/local/handbrake/watch/26.0:/watch5:rw"
+      - "/mnt/local/handbrake/watch/26.5:/watch6:rw"
+      - "/mnt/local/handbrake/watch/27.0:/watch7:rw"
+      - "/mnt/local/handbrake/watch/27.5:/watch8:rw"
+      - "/mnt/local/handbrake/watch/28.0:/watch9:rw"
+      - "/mnt/local/handbrake/watch/28.5:/watch10:rw"
+      - "/mnt/local/handbrake/watch/29.0:/watch11:rw"
+      - "/mnt/local/handbrake/watch/29.5:/watch12:rw"
+      - "/mnt/local/handbrake/watch/30.0:/watch13:rw"
+      - "/mnt/local/handbrake/output:/output:rw"
+      - "/mnt/local/handbrake:/storage:ro"
+    networks:
+      - name: cloudbox
+        aliases:
+          - handbrake
+    purge_networks: yes
+    restart_policy: always
+    state: started
+
+- name: Stop container to customize handbrake settings
+  docker_container:
+    name: handbrake
+    state: stopped
+
+- name: Import customised presets file
+  copy:
+    src: "presets.json"
+    dest: "/opt/handbrake/ghb/presets.json"
+    owner: "{{ user.name }}"
+    group: "{{ user.name }}"
+    mode: 0775
+    force: yes
+
+- name: Import customised preferences file
+  copy:
+    src: "preferences.json"
+    dest: "/opt/handbrake/ghb/preferences.json"
+    owner: "{{ user.name }}"
+    group: "{{ user.name }}"
+    mode: 0775
+    force: yes
+
+- name: Check handbrake auto_encode script exists
+  stat:
+    path: "/opt/scripts/handbrake/auto_encode.sh"
+    get_attributes: false
+    get_checksum: false
+    get_md5: false
+    get_mime: false
+  register: auto_encode
+
+- name: Import handbrake scripts
+  copy:
+    src: "{{ item }}"
+    dest: "/opt/scripts/handbrake/{{ item }}"
+    owner: "{{ user.name }}"
+    group: "{{ user.name }}"
+    mode: 0775
+    force: yes
+  with_items:
+    - "auto_encode.sh"
+    - "test.sh"
+  when: auto_encode.stat.exists == False
+
+- name: Start container to apply changes
+  docker_container:
+    name: handbrake
+    state: started
