@@ -22,6 +22,8 @@ plex:
   db_cache_size: default
 ombi:
   subdomain: ombi
+overseer:
+  subdomain: overseer  
 tautulli:
   subdomain: tautulli
 traefik:

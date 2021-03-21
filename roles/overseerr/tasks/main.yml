@@ -1,0 +1,59 @@
+#########################################################################
+# Title:         Cloudbox: Overseerr                                         #
+# Author(s):     RXWatcher1, l3uddz, desimaniac                         #
+# URL:           https://github.com/cloudbox/cloudbox                   #
+# Docker Image:  hotio/overseerr                                             #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+- name: "Set DNS Record on CloudFlare"
+  include_role:
+    name: cloudflare-dns
+  vars:
+    subdomain: "{{ overseerr.subdomain|default('overseerr',true) }}"
+  when: cloudflare_enabled
+
+- name: Stop and remove any existing container
+  docker_container:
+    name: overseerr
+    state: absent
+
+- name: Create overseerr directories
+  file: "path={{ item }} state=directory mode=0775 owner={{ user.name }} group={{ user.name }}"
+  with_items:
+    - /opt/overseerr
+
+- name: Create and start container
+  docker_container:
+    name: overseerr
+    image: "hotio/overseerr"
+    pull: yes
+    published_ports:
+      - "127.0.0.1:5055:5055"
+    env:
+      BACKUP: "no"
+      PUID: "{{ uid }}"
+      PGID: "{{ gid }}"
+      UMASK: 002
+      LC_ALL: "en_US.UTF-8"
+      TZ: "{{ tz }}"
+    volumes:
+      - "/opt/overseerr:/config"
+    labels:
+      traefik.enable: "true"
+      traefik.backend: "overseerr"
+      traefik.frontend.redirect.entryPoint: "https"
+      traefik.frontend.rule: "Host:{{ overseerr.subdomain|default('overseerr',true) }}.{{ user.domain }}"
+      traefik.port: "5055"
+      traefik.docker.network: "cloudbox"
+      "com.github.cloudbox.cloudbox_managed": "true"
+    networks:
+      - name: cloudbox
+        aliases:
+          - overseerr
+    purge_networks: yes
+    restart_policy: unless-stopped
+    state: started

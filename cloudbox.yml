@@ -58,3 +58,4 @@
     - { role: trackarr, tags: ['trackarr'] }
     - { role: vnc, tags: ['vnc'] }
     - { role: handbrake, tags: ['handbrake'] }
+    - { role: overseerr, tags: ['overseerr'] }
