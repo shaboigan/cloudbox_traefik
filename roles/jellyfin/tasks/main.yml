@@ -1,0 +1,73 @@
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+- name: "Set DNS Record on CloudFlare"
+  include_role:
+    name: cloudflare-dns
+  vars:
+    subdomain: jellyfin
+  when: cloudflare_enabled
+
+- name: Slurp hashed htpasswd
+  slurp:
+    src: "/opt/traefik/.htpasswd"
+  register: hashed
+
+- name: Set hashed password
+  set_fact:
+    htpasswd: "{{ hashed['content'] | b64decode }}"
+
+- name: Stop and remove any existing container
+  docker_container:
+    name: jellyfin
+    state: absent
+
+- name: Create jellyfin directories
+  file: "path={{ item }} state=directory mode=0775 owner={{ user.name }} group={{ user.name }}"
+  with_items:
+    - /opt/jellyfin
+
+- name: "Check if '/dev/dri' exists"
+  stat:
+    path: "/dev/dri"
+  register: dev_dri
+
+- name: Set 'default_volumes' variable
+  set_fact:
+    default_volumes:
+      - "/opt/jellyfin:/config"
+      - "/opt/scripts:/scripts"
+      - "/mnt:/mnt"
+
+- name: Create and start container
+  docker_container:
+    name: jellyfin
+    image: "hotio/jellyfin"
+    pull: yes
+    published_ports:
+      - "127.0.0.1:8096:8096"
+    env:
+      BACKUP: "no"
+      PUID: "{{ uid }}"
+      PGID: "{{ gid }}"
+      UMASK: 002
+      TZ: "{{ tz }}"
+    volumes: "{{ default_volumes + nzbs_downloads_path|default([]) + torrents_downloads_path|default([]) }}"
+    devices: "{{ '/dev/dri:/dev/dri' if (gpu.intel and dev_dri.stat.exists) | default(false) else omit }}"
+    labels:
+      traefik.enable: "true"
+      traefik.backend: "jellyfin"
+      traefik.frontend.redirect.entryPoint: "https"
+      traefik.frontend.rule: "Host:jellyfin.{{ user.domain }}"
+      traefik.port: "8096"
+      traefik.frontend.auth.basic: "{{ htpasswd }}"
+      traefik.docker.network: "cloudbox"
+      "com.github.cloudbox.cloudbox_managed": "true"
+    networks:
+      - name: cloudbox
+        aliases:
+          - jellyfin
+    purge_networks: yes
+    restart_policy: unless-stopped
+    state: started
