@@ -72,6 +72,8 @@
       - "{{ vpn.port }}:{{ vpn.port }}"
       # jackett port
       - "127.0.0.1:9117:9117"
+      # prowlarr port
+      - "127.0.0.1:9696:9696"
     env:
       PUID: "{{ uid }}"
       PGID: "{{ gid }}"
