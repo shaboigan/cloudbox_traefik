@@ -32,7 +32,7 @@
     - { role: cloudplow, tags: ['cloudbox', 'feederbox', 'cloudplow'], when: ['use_remote'] }
     - { role: qbittorrent, tags: ['cloudbox', 'feederbox', 'qbittorrent'], when: [ 'use_torrents' ] }
     - { role: sabnzbd, tags: ['cloudbox', 'feederbox', 'sabnzbd'], when: ['use_nzbs'] }
-    - { role: jackett, tags: ['cloudbox', 'feederbox', 'jackett'], when: ['use_torrents'] }
+    - { role: prowlarr, tags: ['cloudbox', 'feederbox', 'prowlarr'], when: ['use_torrents'] }
     - { role: nzbhydra2, tags: ['cloudbox', 'feederbox', 'nzbhydra2'], when: ['use_nzbs'] }
     - { role: sonarr, tags: ['cloudbox', 'feederbox', 'sonarr'] }
     - { role: radarr, tags: ['cloudbox', 'feederbox', 'radarr'] }
@@ -60,3 +60,4 @@
     - { role: jellyfin, tags: ['jellyfin'] }
     - { role: handbrake, tags: ['handbrake'] }
     - { role: overseerr, tags: ['overseerr'] }
+    - { role: jackett, tags: ['jackett'] }    
