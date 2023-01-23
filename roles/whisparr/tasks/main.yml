@@ -1,0 +1,75 @@
+#########################################################################
+# Title:         Cloudbox: Whisparr Role                                  #
+# Author(s):     l3uddz, desimaniac                                     #
+# URL:           https://github.com/cloudbox/cloudbox                   #
+# Docker Image:  hotio/Whisparr                                           #
+# --                                                                    #
+#         Part of the Cloudbox project: https://cloudbox.works          #
+#########################################################################
+#                   GNU General Public License v3.0                     #
+#########################################################################
+---
+- name: "Set DNS Record on CloudFlare"
+  include_role:
+    name: cloudflare-dns
+  vars:
+    subdomain: Whisparr
+  when: cloudflare_enabled
+
+- name: Slurp hashed htpasswd
+  slurp:
+    src: "/opt/traefik/.htpasswd"
+  register: hashed
+
+- name: Set hashed password
+  set_fact:
+    htpasswd: "{{ hashed['content'] | b64decode }}"
+
+- name: Stop and remove any existing container
+  docker_container:
+    name: Whisparr
+    state: absent
+
+- name: Create Whisparr directories
+  file: "path={{ item }} state=directory mode=0775 owner={{ user.name }} group={{ user.name }}"
+  with_items:
+    - /opt/Whisparr
+
+- name: Set default_volumes variable
+  set_fact:
+    default_volumes:
+      - "/opt/Whisparr:/config"
+      - "/opt/scripts:/scripts"
+      - "/mnt:/mnt"
+      - "/mnt/unionfs/Media/Untitled:/untitled"
+
+- name: Create and start container
+  docker_container:
+    name: Whisparr
+    image: hotio/Whisparr
+    pull: yes
+    published_ports:
+      - "127.0.0.1:6969:6969"
+    env:
+      BACKUP: "no"
+      PUID: "{{ uid }}"
+      PGID: "{{ gid }}"
+      UMASK: 002
+      TZ: "{{ tz }}"
+    volumes: "{{ default_volumes + nzbs_downloads_path|default([]) + torrents_downloads_path|default([]) }}"
+    labels:
+      traefik.enable: "true"
+      traefik.backend: "Whisparr"
+      traefik.frontend.redirect.entryPoint: "https"
+      traefik.frontend.rule: "Host:Whisparr.{{ user.domain }}"
+      traefik.port: "6969"
+      traefik.frontend.auth.basic: "{{ htpasswd }}"
+      traefik.docker.network: "cloudbox"
+      "com.github.cloudbox.cloudbox_managed": "true"
+    networks:
+      - name: cloudbox
+        aliases:
+          - Whisparr
+    purge_networks: yes
+    restart_policy: unless-stopped
+    state: started

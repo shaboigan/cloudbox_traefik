@@ -56,8 +56,8 @@
     - { role: drive_strm, tags: ['drive_strm', 'drive_strm_rebuild'] }
     - { role: hetzner_nfs, tags: ['hetzner_nfs_server', 'hetzner_nfs_server_uninstall', 'hetzner_nfs_client_mount', 'hetzner_nfs_client_unmount'] }
     - { role: trackarr, tags: ['trackarr'] }
+    - { role: whisparr, tags: ['whisparr'] }    
     - { role: vnc, tags: ['vnc'] }
     - { role: jellyfin, tags: ['jellyfin'] }
     - { role: handbrake, tags: ['handbrake'] }
     - { role: overseerr, tags: ['overseerr'] }
-    - { role: jackett, tags: ['jackett'] }    
