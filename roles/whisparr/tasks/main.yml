@@ -46,7 +46,7 @@
 - name: Create and start container
   docker_container:
     name: Whisparr
-    image: hotio/Whisparr
+    image: hotio/whisparr
     pull: yes
     published_ports:
       - "127.0.0.1:6969:6969"
